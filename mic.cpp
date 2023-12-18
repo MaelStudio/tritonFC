@@ -1,47 +1,22 @@
-
 // Creates 16 bit single channel PCM WAV file from microphone input.
 // Default sample rate is 16kHz
-// Audio is not replayed on streaming, only via AVI file
-
-// The following devices have been tested with this application:
-// - I2S microphone: INMP441
-// - PDM microphone: MP34DT01
-//
-// I2S_NUM_1 does not support PDM microphone
-
-// s60sc 2021, 2022
 
 #include "appGlobals.h"
 
-// INMP441 I2S microphone pinout, connect L/R to GND for left channel
-// MP34DT01 PDM microphone pinout, connect SEL to GND for left channel
-// if micSckPin > 0, an I2S microphone is assumed, if micSckPin = -1 a PDM microphone is assumed
-int micSckPin; // I2S SCK / PDM n/a
-int micSWsPin; // I2S WS  / PDM CLK
-int micSdPin;  // I2S SD  / PDM DAT
-// For XIAO_ESP32S3 Sense Cam board, the internal PDM pins are
-// I2S SCK -1
-// I2S WS / PDM CLK 42
-// I2S SD / PDM DAT 41
-// For ESP32S3-EYE Cam board, the internal I2S pins are
-// I2S SCK 41
-// I2S WS 42
-// I2S SD 2
+int micSckPin = -1; // I2S SCK / PDM n/a
+int micSWsPin = 42; // I2S WS  / PDM CLK
+int micSdPin = 41;  // I2S SD  / PDM DAT
 
 #define I2S_MIC 0
 #define PDM_MIC 1
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
 #define I2S_CHAN I2S_NUM_0
-#else
-#define I2S_CHAN I2S_NUM_1 // On ESP32, only I2S1 available
-#endif
 #define DMA_BUFF_LEN 1024 
+
 int micGain = 0;  // microphone gain 0 is off
-static bool micType; 
+static bool micType = PDM_MIC;
 const uint32_t SAMPLE_RATE = 16000; // sample rate used
 static const uint8_t sampleWidth = sizeof(int16_t); 
 static const size_t sampleBytes = DMA_BUFF_LEN * sampleWidth;
-static File wavFile;
 static int totalSamples = 0;
 TaskHandle_t micHandle = NULL;
 static bool doMicCapture = false;
@@ -81,18 +56,11 @@ static inline void IRAM_ATTR wakeTask(TaskHandle_t thisTask) {
   vTaskNotifyGiveFromISR(thisTask, &xHigherPriorityTaskWoken);
   if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
-
+    
 static void startMic() {
   // install & start up the I2S peripheral as microphone when activated
   int queueSize = 4;
   i2s_queue = xQueueCreate(queueSize, sizeof(i2s_event_t));
-#if defined(CAMERA_MODEL_XIAO_ESP32S3)
-  // built in PDM mic
-  micType = PDM_MIC;
-  micSWsPin = 42;
-  micSdPin = 41;
-  micSckPin = -1;
-#endif
   if (micType == PDM_MIC) i2s_mic_config.mode = (i2s_mode_t)((int)(i2s_mic_config.mode) | I2S_MODE_PDM);
   i2s_driver_install(I2S_CHAN, &i2s_mic_config, queueSize, &i2s_queue);
   // set i2s microphone pins

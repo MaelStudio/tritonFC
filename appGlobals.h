@@ -1,43 +1,7 @@
-// Global MJPEG2SD declarations
-//
-// s60sc 2021, 2022
-
 #pragma once
 #include "globals.h"
 
-/**************************************************************************
- Copy & Paste one of the camera models below into the following #define block
- Selecting wrong model may crash your device due to pin conflict
-***************************************************************************/
-/*
- * ESP32 models
-CAMERA_MODEL_AI_THINKER 
-CAMERA_MODEL_WROVER_KIT 
-CAMERA_MODEL_ESP_EYE 
-CAMERA_MODEL_M5STACK_PSRAM 
-CAMERA_MODEL_M5STACK_V2_PSRAM 
-CAMERA_MODEL_M5STACK_WIDE 
-CAMERA_MODEL_M5STACK_ESP32CAM
-CAMERA_MODEL_M5STACK_UNITCAM
-CAMERA_MODEL_TTGO_T_JOURNAL 
-CAMERA_MODEL_ESP32_CAM_BOARD
-CAMERA_MODEL_TTGO_T_CAMERA_PLUS
-
-* ESP32S3 models
-CAMERA_MODEL_XIAO_ESP32S3 
-CAMERA_MODEL_FREENOVE_ESP32S3_CAM
-CAMERA_MODEL_ESP32S3_EYE 
-CAMERA_MODEL_ESP32S3_CAM_LCD
-*/
-
-// User's ESP32 cam board
-#if defined(CONFIG_IDF_TARGET_ESP32)
-#define CAMERA_MODEL_AI_THINKER 
-
-// User's ESP32S3 cam board
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
-#define CAMERA_MODEL_FREENOVE_ESP32S3_CAM
-#endif
+#define CAMERA_MODEL_XIAO_ESP32S3
 
 /**************************************************************************/
 
@@ -55,10 +19,6 @@ CAMERA_MODEL_ESP32S3_CAM_LCD
 /*********************** Fixed defines leave as is ***********************/ 
 /** Do not change anything below here unless you know what you are doing **/
 
-//#define DEV_ONLY // leave commented out
-#ifdef DEV_ONLY 
-//#define SIDE_ALARM // uncomment if used for side alarm
-#endif 
 #define STATIC_IP_OCTAL "133" // dev only
 #define DEBUG_MEM false // leave as false
 #define FLUSH_DELAY 0 // for debugging crashes
@@ -76,11 +36,7 @@ CAMERA_MODEL_ESP32S3_CAM_LCD
 #define IN_FILE_NAME_LEN (FILE_NAME_LEN * 2)
 #define JSON_BUFF_LEN (32 * 1024) // set big enough to hold all file names in a folder
 #define MAX_CONFIGS 160 // must be > number of entries in configs.txt
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
 #define FB_BUFFERS 12 // 1 being processed, rest being filled
-#else
-#define FB_BUFFERS 4 // 1 being processed, rest being filled
-#endif
 #define MAX_JPEG (ONEMEG / 2) // UXGA jpeg frame buffer at highest quality 375kB rounded up
 #define MIN_RAM 8 // min object size stored in ram instead of PSRAM default is 4096
 #define MAX_RAM 4096 // max object size stored in ram instead of PSRAM default is 4096
@@ -91,13 +47,8 @@ CAMERA_MODEL_ESP32S3_CAM_LCD
 #define RGB888_BYTES 3 // number of bytes per pixel
 #define GRAYSCALE_BYTES 1 // number of bytes per pixel 
 
-#ifdef SIDE_ALARM
-#define STORAGE LittleFS
-#define GITHUB_PATH ""
-#else
 #define STORAGE SD_MMC
 #define GITHUB_PATH "/s60sc/ESP32-CAM_MJPEG2SD/master"
-#endif
 #define RAMSIZE (1024 * 8) // set this to multiple of SD card sector size (512 or 1024 bytes)
 #define CHUNKSIZE (1024 * 4)
 #define INCLUDE_FTP_HFS
@@ -125,30 +76,14 @@ CAMERA_MODEL_ESP32S3_CAM_LCD
 #define TELETEMP "/current.csv"
 #define SRTTEMP "/current.srt"
 
-// non default pins configured for SD card on given camera board
-#if defined(CAMERA_MODEL_ESP32S3_EYE) || defined(CAMERA_MODEL_FREENOVE_ESP32S3_CAM)
-#define SD_MMC_CLK 39 
-#define SD_MMC_CMD 38
-#define SD_MMC_D0 40
-#elif defined(CAMERA_MODEL_XIAO_ESP32S3)
 #define SD_MMC_CLK 7 
 #define SD_MMC_CMD 9
 #define SD_MMC_D0 8
-#elif defined(CAMERA_MODEL_TTGO_T_CAMERA_PLUS)
-#define SD_MMC_CLK 21 // SCLK
-#define SD_MMC_CMD 19 // MOSI
-#define SD_MMC_D0 22  // MISO
-#endif
 
-#ifdef CONFIG_IDF_TARGET_ESP32S3 
 #define SERVER_STACK_SIZE (1024 * 8)
 #define DS18B20_STACK_SIZE (1024 * 2)
 #define STICK_STACK_SIZE (1024 * 4)
-#else
-#define SERVER_STACK_SIZE (1024 * 4)
-#define DS18B20_STACK_SIZE (1024)
-#define STICK_STACK_SIZE (1024 * 2)
-#endif
+
 #define BATT_STACK_SIZE (1024 * 2)
 #define CAPTURE_STACK_SIZE (1024 * 4)
 #define EMAIL_STACK_SIZE (1024 * 6)
