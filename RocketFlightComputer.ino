@@ -1,10 +1,3 @@
-  /*
-* Capture ESP32 Cam JPEG images into a AVI file and store on SD
-* AVI files stored on the SD card can also be selected and streamed to a browser as MJPEG.
-*
-* s60sc 2020 - 2023
-*/
-
 #include "appGlobals.h"
 
 char camModel[10];
