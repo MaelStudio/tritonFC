@@ -1,3 +1,7 @@
+// Global generic declarations
+//
+// s60sc 2021, 2022
+
 #pragma once
 // to compile with -Wall -Werror=all -Wextra
 #pragma GCC diagnostic ignored "-Wunused-function"

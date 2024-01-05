@@ -1,3 +1,10 @@
+
+/* 
+Generate AVI format for recorded videos
+
+s60sc 2020, 2022
+*/
+
 /* AVI file format:
 header:
  310 bytes
