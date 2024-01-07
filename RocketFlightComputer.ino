@@ -29,18 +29,9 @@ static void prepCam() {
   config.grab_mode = CAMERA_GRAB_LATEST;
   // init with high specs to pre-allocate larger buffers
   config.fb_location = CAMERA_FB_IN_PSRAM;
-#if CONFIG_IDF_TARGET_ESP32S3
-  config.frame_size = FRAMESIZE_QSXGA; // 8M
-#else
-  config.frame_size = FRAMESIZE_UXGA;  // 4M
-#endif  
+  config.frame_size = FRAMESIZE_HVGA; // 8M
   config.jpeg_quality = 10;
   config.fb_count = FB_BUFFERS;
-
-#if defined(CAMERA_MODEL_ESP_EYE)
-  pinMode(13, INPUT_PULLUP);
-  pinMode(14, INPUT_PULLUP);
-#endif
 
   // camera init
   if (psramFound()) {
@@ -76,73 +67,41 @@ static void prepCam() {
       }
       LOG_INF("Camera init OK for model %s on board %s", camModel, CAM_BOARD);
 
-      // model specific corrections
-      if (s->id.PID == OV3660_PID) {
-        // initial sensors are flipped vertically and colors are a bit saturated
-        s->set_vflip(s, 1);//flip it back
-        s->set_brightness(s, 1);//up the brightness just a bit
-        s->set_saturation(s, -2);//lower the saturation
-      }
-      // set frame size to configured value
-      char fsizePtr[4];
-      if (retrieveConfigVal("framesize", fsizePtr)) s->set_framesize(s, (framesize_t)(atoi(fsizePtr)));
-      else s->set_framesize(s, FRAMESIZE_SVGA);
-  
-#if defined(CAMERA_MODEL_M5STACK_WIDE)
-      s->set_vflip(s, 1);
-      s->set_hmirror(s, 1);
-#endif
-  
-#if defined(CAMERA_MODEL_M5STACK_WIDE) || defined(CAMERA_MODEL_M5STACK_ESP32CAM)
-    s->set_vflip(s, 1);
-    s->set_hmirror(s, 1);
-#endif
-  
-#if defined(CAMERA_MODEL_ESP32S3_EYE)
-    s->set_vflip(s, 1);
-#endif
+      s->set_framesize(s, FRAMESIZE_HVGA);
     }
   }
   debugMemory("prepCam");
 }
 
-void setup() {   
+void setup() {
+  pinMode(D0, INPUT_PULLUP);
+
   logSetup();
-  // prep SD card storage
   startStorage(); 
-  // Load saved user configuration
-  loadConfig();
-  // initialise camera
-  if (psramFound()) prepCam();
-  else snprintf(startupFailure, SF_LEN, "Startup Failure: Need PSRAM to be enabled");
+  prepCam();
+  prepMic();
+  prepRecording();
   
-#ifdef DEV_ONLY
-  devSetup();
-#endif
-
-  // connect wifi or start config AP if router details not available
-  startWifi();
-
-  startWebServer();
-  if (strlen(startupFailure)) LOG_ERR("%s", startupFailure);
-  else {
-    // start rest of services
-    startSustainTasks(); 
-    prepSMTP(); 
-    prepUpload();
-    prepPeripherals();
-    prepMic(); 
-    prepTelemetry();
-    prepTelegram();
-    prepRecording(); 
-    LOG_INF("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz); 
-    checkMemory();
-  } 
+  LOG_INF("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz);
+  checkMemory();
 }
 
 void loop() {
-  // confirm not blocked in setup
-  LOG_INF("=============== Total tasks: %u ===============\n", uxTaskGetNumberOfTasks() - 1);
-  delay(1000);
-  vTaskDelete(NULL); // free 8k ram
+  while (!digitalRead(D0)) {
+    delay(10);
+  }
+  while (digitalRead(D0)) {
+    delay(10);
+  }
+
+  forceRecord = true;
+
+  while (!digitalRead(D0)) {
+    delay(10);
+  }
+  while (digitalRead(D0)) {
+    delay(10);
+  }
+
+  forceRecord = false;
 }

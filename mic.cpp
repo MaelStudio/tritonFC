@@ -36,7 +36,7 @@ int micSdPin;  // I2S SD  / PDM DAT
 #define I2S_CHAN I2S_NUM_1 // On ESP32, only I2S1 available
 #endif
 #define DMA_BUFF_LEN 1024 
-int micGain = 0;  // microphone gain 0 is off
+int micGain = 5;  // microphone gain 0 is off
 static bool micType; 
 const uint32_t SAMPLE_RATE = 16000; // sample rate used
 static const uint8_t sampleWidth = sizeof(int16_t); 
@@ -152,7 +152,7 @@ void startAudio() {
   // start audio recording and write recorded audio to SD card as WAV file 
   // combined into AVI file as PCM channel on FTP upload or browser download
   // so can be read by media players
-  if (micUse && micGain) {
+  if (micGain) {
     wavFile = STORAGE.open(WAVTEMP, FILE_WRITE);
     wavFile.write(wavHeader, WAV_HEADER_LEN); 
     wakeTask(micHandle);
@@ -183,15 +183,8 @@ void finishAudio(bool isValid) {
 }
 
 void prepMic() {
-  if (micUse) { 
-    if (micSckPin && micSWsPin && micSdPin) {
-      micType = micSckPin == -1 ? PDM_MIC : I2S_MIC;
-      LOG_INF("Sound recording is available using %s mic on I2S%i", micType ? "PDM" : "I2S", I2S_CHAN);
-      xTaskCreate(micTask, "micTask", MIC_STACK_SIZE, NULL, 1, &micHandle);
-      debugMemory("prepMic");
-    } else {
-      micUse = false;
-      LOG_WRN("At least one mic pin is not defined");
-    }
-  }
+  micType = micSckPin == -1 ? PDM_MIC : I2S_MIC;
+  LOG_INF("Sound recording is available using %s mic on I2S%i", micType ? "PDM" : "I2S", I2S_CHAN);
+  xTaskCreate(micTask, "micTask", MIC_STACK_SIZE, NULL, 1, &micHandle);
+  debugMemory("prepMic");
 }

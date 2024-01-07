@@ -260,10 +260,6 @@ bool checkMotion(camera_fb_t* fb, bool motionStatus) {
         } // else for telegram, wait till filename available
       }
       dTime = millis();
-      if (mqtt_active && motionCnt) {
-        sprintf(jsonBuff, "{\"MOTION\":\"ON\",\"TIME\":\"%s\"}",esp_log_system_timestamp());
-        mqttPublish(jsonBuff);
-      }
     } 
   } else motionCnt = 0;
 
@@ -271,10 +267,6 @@ bool checkMotion(camera_fb_t* fb, bool motionStatus) {
     // insufficient change or motion not classified
     LOG_DBG("***** Motion - STOP");
     motionStatus = false; // motion stopped
-    if (mqtt_active) {
-      sprintf(jsonBuff, "{\"MOTION\":\"OFF\",\"TIME\":\"%s\"}", esp_log_system_timestamp());
-      mqttPublish(jsonBuff);
-    }
   } 
   if (motionStatus) LOG_DBG("*** Motion - ongoing %u frames", motionCnt);
 
