@@ -2,13 +2,13 @@
 
 char camModel[10];
 
-static void startStorage() {
+bool startStorage() {
 
   // if (psramFound()) heap_caps_malloc_extmem_enable(MIN_RAM); // small number to force vector into psram
   // fileVec.reserve(1000);
   // if (psramFound()) heap_caps_malloc_extmem_enable(MAX_RAM);
 
-  SD_MMC.begin("/sdcard", true, formatIfMountFailed);
+  bool res = SD_MMC.begin("/sdcard", true, formatIfMountFailed);
 
   uint8_t cardType = SD_MMC.cardType();
   if (cardType == CARD_NONE) LOG_WRN("No SD card attached");
@@ -19,6 +19,8 @@ static void startStorage() {
     else if (cardType == CARD_SDHC) strcpy(typeStr, "SDHC");
     LOG_INF("SD card type %s, Size: %s", typeStr, fmtSize(SD_MMC.cardSize()));
   }
+
+  return res;
 }
 
 static void prepCam() {
