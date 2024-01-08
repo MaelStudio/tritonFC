@@ -4,14 +4,21 @@ char camModel[10];
 
 bool startStorage() {
 
-  // if (psramFound()) heap_caps_malloc_extmem_enable(MIN_RAM); // small number to force vector into psram
-  // fileVec.reserve(1000);
-  // if (psramFound()) heap_caps_malloc_extmem_enable(MAX_RAM);
-
+  SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
   bool res = SD_MMC.begin("/sdcard", true, true);
 
+  if (!res) {
+    LOG_ERR("SD card mount failed");
+    snprintf(startupFailure, SF_LEN, "Startup Failure: Check SD card inserted");
+    return false;
+  }
+
   uint8_t cardType = SD_MMC.cardType();
-  if (cardType == CARD_NONE) LOG_WRN("No SD card attached");
+  if (cardType == CARD_NONE) {
+    LOG_WRN("No SD card attached");
+    snprintf(startupFailure, SF_LEN, "Startup Failure: Check SD card inserted");
+    return false;
+  }
   else {
     char typeStr[8] = "UNKNOWN";
     if (cardType == CARD_MMC) strcpy(typeStr, "MMC");
