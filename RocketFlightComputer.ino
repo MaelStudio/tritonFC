@@ -8,7 +8,7 @@ bool startStorage() {
   // fileVec.reserve(1000);
   // if (psramFound()) heap_caps_malloc_extmem_enable(MAX_RAM);
 
-  bool res = SD_MMC.begin("/sdcard", true, formatIfMountFailed);
+  bool res = SD_MMC.begin("/sdcard", true, true);
 
   uint8_t cardType = SD_MMC.cardType();
   if (cardType == CARD_NONE) LOG_WRN("No SD card attached");
