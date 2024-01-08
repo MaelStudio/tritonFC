@@ -102,7 +102,6 @@ static void openAvi() {
   oTime = millis() - oTime;
   LOG_DBG("File opening time: %ums", oTime);
   startAudio();
-  startTelemetry();
   // initialisation of counters
   startTime = millis();
   frameCnt = fTimeTot = wTimeTot = dTimeTot = vidSize = 0;
@@ -198,7 +197,6 @@ static bool closeAvi() {
     STORAGE.rename(AVITEMP, aviFileName);
     LOG_DBG("AVI close time %lu ms", millis() - hTime); 
     cTime = millis() - cTime;
-    stopTelemetry(aviFileName);
     
     // AVI stats
     LOG_INF("******** AVI recording stats ********");
@@ -240,13 +238,6 @@ static boolean processFrame() {
 
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL || !fb->len || fb->len > MAX_JPEG) return false;
-  for (int i = 0; i < numStreams; i++) {
-    if (!streamBufferSize[i] && streamBuffer[i] != NULL) {
-      memcpy(streamBuffer[i], fb->buf, fb->len);
-      streamBufferSize[i] = fb->len;   
-      xSemaphoreGive(frameSemaphore[i]); // signal frame ready for stream
-    }
-  }
   
   // force start button will start capture,
   isCapturing = forceRecord;
@@ -531,7 +522,6 @@ bool prepRecording() {
   readSemaphore = xSemaphoreCreateBinary();
   playbackSemaphore = xSemaphoreCreateBinary();
   aviMutex = xSemaphoreCreateMutex();
-  for (int i = 0; i < numStreams; i++) frameSemaphore[i] = xSemaphoreCreateBinary();
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL) LOG_WRN("failed to get camera frame");
   else {
@@ -554,16 +544,7 @@ static void deleteTask(TaskHandle_t thisTaskHandle) {
 }
 
 void endTasks() {
-  for (int i = 0; i < numStreams; i++) deleteTask(sustainHandle[i]);
   deleteTask(captureHandle);
-  deleteTask(playbackHandle);
-  deleteTask(DS18B20handle);
-  deleteTask(telemetryHandle);
-  deleteTask(servoHandle);
-  deleteTask(emailHandle);
-  deleteTask(fsHandle);
-  deleteTask(uartClientHandle);
-  deleteTask(stickHandle);
 }
 
 void OTAprereq() {

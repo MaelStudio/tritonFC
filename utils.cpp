@@ -761,12 +761,7 @@ void logPrint(const char *format, ...) {
         if (counter_write++ % WRITE_CACHE_CYCLE == 0) fsync(fileno(log_remote_fp));
       } 
     }
-    if (ramLog) ramLogStore(msgLen); // store in ram 
-    // output to web socket if open
-    if (msgLen > 1) {
-      outBuf[msgLen - 1] = 0; // lose final '/n'
-      if (wsLog) wsAsyncSend(outBuf);
-    }
+    if (ramLog) ramLogStore(msgLen); // store in ram
     xSemaphoreGive(logMutex);
   } 
 }
