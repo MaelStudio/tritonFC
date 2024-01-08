@@ -2,6 +2,25 @@
 
 char camModel[10];
 
+static void startStorage() {
+
+  // if (psramFound()) heap_caps_malloc_extmem_enable(MIN_RAM); // small number to force vector into psram
+  // fileVec.reserve(1000);
+  // if (psramFound()) heap_caps_malloc_extmem_enable(MAX_RAM);
+
+  SD_MMC.begin("/sdcard", true, formatIfMountFailed);
+
+  uint8_t cardType = SD_MMC.cardType();
+  if (cardType == CARD_NONE) LOG_WRN("No SD card attached");
+  else {
+    char typeStr[8] = "UNKNOWN";
+    if (cardType == CARD_MMC) strcpy(typeStr, "MMC");
+    else if (cardType == CARD_SD) strcpy(typeStr, "SDSC");
+    else if (cardType == CARD_SDHC) strcpy(typeStr, "SDHC");
+    LOG_INF("SD card type %s, Size: %s", typeStr, fmtSize(SD_MMC.cardSize()));
+  }
+}
+
 static void prepCam() {
   // initialise camera depending on model and board
   // configure camera
@@ -77,7 +96,7 @@ void setup() {
   pinMode(D0, INPUT_PULLUP);
 
   logSetup();
-  startStorage(); 
+  startStorage();
   prepCam();
   prepMic();
   prepRecording();
