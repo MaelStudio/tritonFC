@@ -60,7 +60,7 @@ void controlFrameTimer(bool restartTimer) {
   static hw_timer_t* frameTimer = NULL;
   // stop current timer
   if (frameTimer) {
-    timerAlarmDisable(frameTimer);   
+    timerAlarmDisable(frameTimer);
     timerDetachInterrupt(frameTimer); 
     timerEnd(frameTimer);
   }
