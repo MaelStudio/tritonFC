@@ -37,33 +37,20 @@ uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
 static size_t highPoint;
 static File aviFile;
 static char aviFileName[FILE_NAME_LEN];
-
-// SD playback
-static File playbackFile;
 static char partName[FILE_NAME_LEN];
-static size_t readLen;
-static uint8_t recFPS;
-static uint32_t recDuration;
-static uint8_t saveFPS = 99;
-bool doPlayback = false; // controls playback
 
 // task control
 TaskHandle_t captureHandle = NULL;
-TaskHandle_t playbackHandle = NULL;
 static SemaphoreHandle_t readSemaphore;
-static SemaphoreHandle_t playbackSemaphore;
 SemaphoreHandle_t frameSemaphore[MAX_STREAMS] = {NULL};
 SemaphoreHandle_t aviMutex = NULL;
-static volatile bool isPlaying = false; // controls playback on app
 bool isCapturing = false;
-bool stopPlayback = false; // controls if playback allowed
 
 /**************** timers & ISRs ************************/
 
 static void IRAM_ATTR frameISR() {
   // interrupt at current frame rate
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  if (isPlaying) xSemaphoreGiveFromISR (playbackSemaphore, &xHigherPriorityTaskWoken ); // notify playback to send frame
   vTaskNotifyGiveFromISR(captureHandle, &xHigherPriorityTaskWoken); // wake capture task to process frame
   if (xHigherPriorityTaskWoken == pdTRUE) portYIELD_FROM_ISR();
 }
@@ -245,8 +232,6 @@ static boolean processFrame() {
     else if (!forceRecord && wasRecording) wasRecording = false;
     
     if (isCapturing && !wasCapturing) {
-      stopPlaying(); // terminate any playback
-      stopPlayback = true; // stop any subsequent playback
       LOG_ALT("Capture started by Button");
       openAvi();
       wasCapturing = true;
@@ -272,8 +257,8 @@ static boolean processFrame() {
   esp_camera_fb_return(fb);
   if (finishRecording) {
     // cleanly finish recording (normal or forced)
-    if (stopPlayback) closeAvi();
-    finishRecording = isCapturing = wasCapturing = stopPlayback = false; // allow for playbacks
+    closeAvi();
+    finishRecording = isCapturing = wasCapturing = false;
   }
   return res;
 }
@@ -296,7 +281,6 @@ uint8_t setFPS(uint8_t val) {
     FPS = val;
     // change frame timer which drives the task
     controlFrameTimer(true);
-    saveFPS = FPS; // used to reset FPS after playback
   }
   return FPS;
 }
@@ -305,202 +289,6 @@ uint8_t setFPSlookup(uint8_t val) {
   // set FPS from framesize lookup
   fsizePtr = val;
   return setFPS(frameData[fsizePtr].defaultFPS);
-}
-
-/********************** plackback AVI as MJPEG ***********************/
-
-static fnameStruct extractMeta(const char* fname) {
-  // extract FPS, duration, and frame count from avi filename
-  fnameStruct fnameMeta;
-  char fnameStr[FILE_NAME_LEN];
-  strcpy(fnameStr, fname);
-  // replace all '_' with space for sscanf
-  replaceChar(fnameStr, '_', ' ');
-  int items = sscanf(fnameStr, "%*s %*s %*s %hhu %u %hu", &fnameMeta.recFPS, &fnameMeta.recDuration, &fnameMeta.frameCnt);
-  if (items != 3) LOG_ERR("failed to parse %s, items %u", fname, items);
-  return fnameMeta;
-}
-
-static void playbackFPS(const char* fname) {
-  // extract meta data from filename to commence playback
-  fnameStruct fnameMeta = extractMeta(fname);
-  recFPS = fnameMeta.recFPS;
-  if (recFPS < 1) recFPS = 1;
-  recDuration = fnameMeta.recDuration;
-  // temp change framerate to recorded framerate
-  FPS = recFPS;
-  controlFrameTimer(true); // set frametimer
-}
-
-static void readSD() {
-  // read next cluster from SD for playback
-  uint32_t rTime = millis();
-  // read to interim dram before copying to psram
-  readLen = 0;
-  if (!stopPlayback) {
-    readLen = playbackFile.read(iSDbuffer+RAMSIZE+CHUNK_HDR, RAMSIZE);
-    LOG_DBG("SD read time %lu ms", millis() - rTime);
-  }
-  wTimeTot += millis() - rTime;
-  xSemaphoreGive(readSemaphore); // signal that ready     
-  delay(10);
-}
-
-
-void openSDfile(const char* streamFile) {
-  // open selected file on SD for streaming
-  if (stopPlayback) LOG_WRN("Playback refused - capture in progress");
-  else {
-    stopPlaying(); // in case already running
-    strcpy(aviFileName, streamFile);
-    LOG_INF("Playing %s", aviFileName);
-    playbackFile = STORAGE.open(aviFileName, FILE_READ);
-    playbackFile.seek(AVI_HEADER_LEN, SeekSet); // skip over header
-    playbackFPS(aviFileName);
-    isPlaying = true; //playback status
-    doPlayback = true; // control playback
-    readSD(); // prime playback task
-  }
-}
-
-mjpegStruct getNextFrame(bool firstCall) {
-  // get next cluster on demand when ready for opened avi
-  mjpegStruct mjpegData;
-  static bool remainingBuff;
-  static bool completedPlayback;
-  static size_t buffOffset;
-  static uint32_t hTimeTot;
-  static uint32_t tTimeTot;
-  static uint32_t hTime;
-  static size_t remainingFrame;
-  static size_t buffLen;
-  const uint32_t dcVal = 0x63643030; // value of 00dc marker
-  if (firstCall) {
-    sTime = millis();
-    hTime = millis();  
-    remainingBuff = completedPlayback = false;
-    frameCnt = remainingFrame = vidSize =  buffOffset = 0;
-    wTimeTot = fTimeTot = hTimeTot = tTimeTot = 1; // avoid divide by 0
-  }  
-  LOG_DBG("http send time %lu ms", millis() - hTime);
-  hTimeTot += millis() - hTime;
-  uint32_t mTime = millis();
-  if (!stopPlayback) {
-    // continue sending out frames
-    if (!remainingBuff) {
-      // load more data from SD
-      mTime = millis();
-      // move final bytes to buffer start in case jpeg marker at end of buffer
-      memcpy(iSDbuffer, iSDbuffer+RAMSIZE, CHUNK_HDR);
-      xSemaphoreTake(readSemaphore, portMAX_DELAY); // wait for read from SD card completed
-      buffLen = readLen;
-      LOG_DBG("SD wait time %lu ms", millis()-mTime);
-      wTimeTot += millis()-mTime;
-      mTime = millis();  
-      // overlap buffer by CHUNK_HDR to prevent jpeg marker being split between buffers
-      memcpy(iSDbuffer+CHUNK_HDR, iSDbuffer+RAMSIZE+CHUNK_HDR, buffLen); // load new cluster from double buffer
-      LOG_DBG("memcpy took %lu ms for %u bytes", millis()-mTime, buffLen);
-      fTimeTot += millis() - mTime;
-      remainingBuff = true;
-      if (buffOffset > RAMSIZE) buffOffset = 4; // special case, marker overlaps end of buffer 
-      else buffOffset = frameCnt ? 0 : CHUNK_HDR; // only before 1st frame
-      xTaskNotifyGive(playbackHandle); // wake up task to get next cluster - sets readLen
-    }
-    mTime = millis();
-    if (!remainingFrame) {
-      // at start of jpeg frame marker
-      uint32_t inVal;
-      memcpy(&inVal, iSDbuffer + buffOffset, 4);
-      if (inVal != dcVal) {
-        // reached end of frames to stream
-        mjpegData.buffLen = buffOffset; // remainder of final jpeg
-        mjpegData.buffOffset = 0; // from start of buff
-        mjpegData.jpegSize = 0; 
-        stopPlayback = completedPlayback = true;
-        return mjpegData;
-      } else {
-        // get jpeg frame size
-        uint32_t jpegSize;
-        memcpy(&jpegSize, iSDbuffer + buffOffset + 4, 4);
-        remainingFrame = jpegSize;
-        vidSize += jpegSize;
-        buffOffset += CHUNK_HDR; // skip over marker 
-        mjpegData.jpegSize = jpegSize; // signal start of jpeg to webServer
-        mTime = millis();
-        // wait on playbackSemaphore for rate control
-        xSemaphoreTake(playbackSemaphore, portMAX_DELAY);
-        LOG_DBG("frame timer wait %lu ms", millis()-mTime);
-        tTimeTot += millis()-mTime;
-        frameCnt++;
-        showProgress();
-      }
-    } else mjpegData.jpegSize = 0; // within frame,    
-    // determine amount of data to send to webServer
-    if (buffOffset > RAMSIZE) mjpegData.buffLen = 0; // special case 
-    else mjpegData.buffLen = (remainingFrame > buffLen - buffOffset) ? buffLen - buffOffset : remainingFrame;
-    mjpegData.buffOffset = buffOffset; // from here    
-    remainingFrame -= mjpegData.buffLen;
-    buffOffset += mjpegData.buffLen;
-    if (buffOffset >= buffLen) remainingBuff = false;
-  } else {
-    // finished, close SD file used for streaming
-    playbackFile.close();
-    logLine();
-    if (!completedPlayback) LOG_INF("Force close playback");
-    uint32_t playDuration = (millis() - sTime) / 1000;
-    uint32_t totBusy = wTimeTot + fTimeTot + hTimeTot;
-    LOG_INF("******** AVI playback stats ********");
-    LOG_INF("Playback %s", aviFileName);
-    LOG_INF("Recorded FPS %u, duration %u secs", recFPS, recDuration);
-    LOG_INF("Playback FPS %0.1f, duration %u secs", (float)frameCnt / playDuration, playDuration);
-    LOG_INF("Number of frames: %u", frameCnt);
-    if (frameCnt) {
-      LOG_INF("Average SD read speed: %u kB/s", ((vidSize / wTimeTot) * 1000) / 1024);
-      LOG_INF("Average frame SD read time: %u ms", wTimeTot / frameCnt);
-      LOG_INF("Average frame processing time: %u ms", fTimeTot / frameCnt);
-      LOG_INF("Average frame delay time: %u ms", tTimeTot / frameCnt);
-      LOG_INF("Average http send time: %u ms", hTimeTot / frameCnt);
-      LOG_INF("Busy: %u%%", min(100 * totBusy / (totBusy + tTimeTot), (uint32_t)100));
-    }
-    checkMemory();
-    LOG_INF("*************************************\n");
-    setFPS(saveFPS); // realign with browser
-    stopPlayback = isPlaying = false;
-    mjpegData.buffLen = mjpegData.buffOffset = 0; // signal end of jpeg
-  }
-  hTime = millis();
-  delay(1);
-  return mjpegData;
-}
-
-void stopPlaying() {
-  if (isPlaying) {
-    // force stop any currently running playback
-    stopPlayback = true;
-    // wait till stopped cleanly, but prevent infinite loop
-    uint32_t timeOut = millis();
-    while (doPlayback && millis() - timeOut < MAX_FRAME_WAIT) delay(10);
-    if (doPlayback) {
-      // not yet closed, so force close
-      logLine();
-      LOG_WRN("Force closed playback");
-      doPlayback = false; // stop webserver playback
-      setFPS(saveFPS);
-      xSemaphoreGive(playbackSemaphore);
-      xSemaphoreGive(readSemaphore);
-      delay(200);
-    } 
-    stopPlayback = false;
-    isPlaying = false;
-  }
-}
-
-static void playbackTask(void* parameter) {
-  while (true) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    readSD();
-  }
-  vTaskDelete(NULL);
 }
 
 /******************* Startup ********************/
@@ -519,7 +307,6 @@ static void startSDtasks() {
 bool prepRecording() {
   // initialisation & prep for AVI capture
   readSemaphore = xSemaphoreCreateBinary();
-  playbackSemaphore = xSemaphoreCreateBinary();
   aviMutex = xSemaphoreCreateMutex();
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL) LOG_WRN("failed to get camera frame");
@@ -548,7 +335,7 @@ void endTasks() {
 
 void OTAprereq() {
   // stop timer isrs, and free up heap space, or crashes esp32
-  doPlayback = forceRecord = false;
+  forceRecord = false;
   controlFrameTimer(false);
   stickTimer(false);
   stopPing();
