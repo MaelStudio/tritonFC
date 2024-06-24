@@ -5,31 +5,6 @@
 #pragma once
 #include "globals.h"
 
-/**************************************************************************
- Copy & Paste one of the camera models below into the following #define block
- Selecting wrong model may crash your device due to pin conflict
-***************************************************************************/
-/*
- * ESP32 models
-CAMERA_MODEL_AI_THINKER 
-CAMERA_MODEL_WROVER_KIT 
-CAMERA_MODEL_ESP_EYE 
-CAMERA_MODEL_M5STACK_PSRAM 
-CAMERA_MODEL_M5STACK_V2_PSRAM 
-CAMERA_MODEL_M5STACK_WIDE 
-CAMERA_MODEL_M5STACK_ESP32CAM
-CAMERA_MODEL_M5STACK_UNITCAM
-CAMERA_MODEL_TTGO_T_JOURNAL 
-CAMERA_MODEL_ESP32_CAM_BOARD
-CAMERA_MODEL_TTGO_T_CAMERA_PLUS
-
-* ESP32S3 models
-CAMERA_MODEL_XIAO_ESP32S3 
-CAMERA_MODEL_FREENOVE_ESP32S3_CAM
-CAMERA_MODEL_ESP32S3_EYE 
-CAMERA_MODEL_ESP32S3_CAM_LCD
-*/
-
 // User's ESP32 cam board
 #if defined(CONFIG_IDF_TARGET_ESP32)
 #define CAMERA_MODEL_AI_THINKER 

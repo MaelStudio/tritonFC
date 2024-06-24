@@ -57,7 +57,7 @@ static void prepCam() {
   config.grab_mode = CAMERA_GRAB_LATEST;
   // init with high specs to pre-allocate larger buffers
   config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.frame_size = FRAMESIZE_HVGA; // 8M
+  config.frame_size = FRAMESIZE_HVGA;
   config.jpeg_quality = 10;
   config.fb_count = FB_BUFFERS;
 

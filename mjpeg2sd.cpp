@@ -17,6 +17,7 @@ uint8_t fsizePtr; // index to frameData[]
 uint8_t minSeconds = 5; // default min video length (includes POST_MOTION_TIME)
 bool doRecording = true; // whether to capture to SD or not 
 uint8_t xclkMhz = 20; // camera clock rate MHz
+#define OneMHz 1000000
 
 // header and reporting info
 static uint32_t vidSize; // total video size
@@ -56,22 +57,22 @@ static void IRAM_ATTR frameISR() {
 }
 
 void controlFrameTimer(bool restartTimer) {
-  // frame timer control, timer 3 so dont conflict with cam
+  // frame timer control
   static hw_timer_t* frameTimer = NULL;
   // stop current timer
   if (frameTimer) {
-    timerAlarmDisable(frameTimer);
     timerDetachInterrupt(frameTimer); 
     timerEnd(frameTimer);
+    frameTimer = NULL;
   }
   if (restartTimer) {
-    // (re)start timer 3 interrupt per required framerate
-    frameTimer = timerBegin(3, 8000, true); // 0.1ms tick
-    frameInterval = 10000 / FPS; // in units of 0.1ms 
-    LOG_DBG("Frame timer interval %ums for FPS %u", frameInterval/10, FPS); 
-    timerAlarmWrite(frameTimer, frameInterval, true); 
-    timerAlarmEnable(frameTimer);
-    timerAttachInterrupt(frameTimer, &frameISR, true);
+    // (re)start timer interrupt for required framerate
+    frameTimer = timerBegin(OneMHz);
+    if (frameTimer) {
+      frameInterval = OneMHz / FPS; // in units of us
+      timerAttachInterrupt(frameTimer, &frameISR);
+      timerAlarm(frameTimer, frameInterval, true, 0); // micro seconds
+    } else LOG_ERR("Failed to setup frameTimer");
   }
 }
 
@@ -315,9 +316,6 @@ bool prepRecording() {
     fb = NULL;
   }
   startSDtasks();
-#if INCLUDE_TINYML
-  LOG_INF("%sUsing TinyML", mlUse ? "" : "Not ");
-#endif
   LOG_INF("Ready to record new AVI !");
   logLine();
   debugMemory("prepRecording");
@@ -331,15 +329,4 @@ static void deleteTask(TaskHandle_t thisTaskHandle) {
 
 void endTasks() {
   deleteTask(captureHandle);
-}
-
-void OTAprereq() {
-  // stop timer isrs, and free up heap space, or crashes esp32
-  forceRecord = false;
-  controlFrameTimer(false);
-  stickTimer(false);
-  stopPing();
-  endTasks();
-  esp_camera_deinit();
-  delay(100);
 }
