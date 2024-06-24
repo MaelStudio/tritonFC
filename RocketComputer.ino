@@ -107,6 +107,7 @@ void setup() {
   logSetup();
   startStorage();
   prepCam();
+  prepMic();
   prepRecording();
   
   LOG_INF("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz);

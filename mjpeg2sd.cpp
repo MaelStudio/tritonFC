@@ -89,6 +89,7 @@ static void openAvi() {
   aviFile = STORAGE.open(AVITEMP, FILE_WRITE);
   oTime = millis() - oTime;
   LOG_DBG("File opening time: %ums", oTime);
+  startAudio();
   // initialisation of counters
   startTime = millis();
   frameCnt = fTimeTot = wTimeTot = dTimeTot = vidSize = 0;
@@ -148,8 +149,17 @@ static bool closeAvi() {
 
   cTime = millis();
   // write remaining frame content to SD
+  aviFile.write(iSDbuffer, highPoint); 
   size_t readLen = 0;
-  aviFile.write(iSDbuffer, highPoint);
+  // add wav file if exists
+  finishAudio(true);
+  bool haveWav = haveWavFile();
+  if (haveWav) {
+    do {
+      readLen = writeWavFile(iSDbuffer, RAMSIZE);
+      aviFile.write(iSDbuffer, readLen);
+    } while (readLen > 0);
+  }
   // save avi index
   finalizeAviIndex(frameCnt);
   do {
@@ -170,7 +180,7 @@ static bool closeAvi() {
   if (vidDurationSecs >= minSeconds) {
     // name file to include actual dateTime, FPS, duration, and frame count
     int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%u_%u%s.%s", 
-      partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs, frameCnt, false ? "_S" : "", AVI_EXT);
+      partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs, frameCnt, haveWav ? "_S" : "", AVI_EXT);
     if (alen > FILE_NAME_LEN - 1) LOG_WRN("file name truncated");
     STORAGE.rename(AVITEMP, aviFileName);
     LOG_DBG("AVI close time %lu ms", millis() - hTime); 
