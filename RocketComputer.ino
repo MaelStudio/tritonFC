@@ -63,42 +63,12 @@ static void prepCam() {
 
   // camera init
   if (psramFound()) {
-    esp_err_t err = ESP_FAIL;
-    uint8_t retries = 2;
-    while (retries && err != ESP_OK) {
-      err = esp_camera_init(&config);
-      if (err != ESP_OK) {
-        // power cycle the camera, provided pin is connected
-        digitalWrite(PWDN_GPIO_NUM, 1);
-        delay(100);
-        digitalWrite(PWDN_GPIO_NUM, 0); 
-        delay(100);
-        retries--;
-      }
-    } 
+    esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) snprintf(startupFailure, SF_LEN, "Startup Failure: Camera init error 0x%x", err);
     else {
-      sensor_t * s = esp_camera_sensor_get();
-      switch (s->id.PID) {
-        case (OV2640_PID):
-          strcpy(camModel, "OV2640");
-        break;
-        case (OV3660_PID):
-          strcpy(camModel, "OV3660");
-        break;
-        case (OV5640_PID):
-          strcpy(camModel, "OV5640");
-        break;
-        default:
-          strcpy(camModel, "Other");
-        break;
-      }
-      LOG_INF("Camera init OK for model %s on board %s", camModel, CAM_BOARD);
-
-      s->set_framesize(s, FRAMESIZE_HVGA);
+      LOG_INF("Camera init OK.");
     }
   }
-  debugMemory("prepCam");
 }
 
 void setup() {
@@ -110,7 +80,6 @@ void setup() {
   prepRecording();
   
   LOG_INF("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz);
-  checkMemory();
 }
 
 void loop() {

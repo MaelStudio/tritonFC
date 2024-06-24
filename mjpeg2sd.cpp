@@ -28,7 +28,6 @@ static uint32_t fTimeTot; // total frame buffering time
 static uint32_t wTimeTot; // total SD write time
 static uint32_t oTime; // file opening time
 static uint32_t cTime; // file closing time
-static uint32_t sTime; // file streaming time
 
 uint8_t frameDataRows = 14; // number of frame sizes
 static uint16_t frameInterval; // units of 0.1ms between frames
@@ -169,7 +168,7 @@ static bool closeAvi() {
   uint32_t hTime = millis();
   if (vidDurationSecs >= minSeconds) {
     // name file to include actual dateTime, FPS, duration, and frame count
-    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%u_%u%s.%s", 
+    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%u_%u%s.%s",
       partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs, frameCnt, false ? "_S" : "", AVI_EXT);
     if (alen > FILE_NAME_LEN - 1) LOG_WRN("file name truncated");
     STORAGE.rename(AVITEMP, aviFileName);
@@ -193,7 +192,6 @@ static bool closeAvi() {
     LOG_INF("Average SD write speed: %u kB/s", ((vidSize / wTimeTot) * 1000) / 1024);
     LOG_INF("File open / completion times: %u ms / %u ms", oTime, cTime);
     LOG_INF("Busy: %u%%", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
-    checkMemory();
     LOG_INF("*************************************");
     return true; 
   } else {
@@ -291,8 +289,6 @@ static void startSDtasks() {
   sensor_t * s = esp_camera_sensor_get();
   fsizePtr = s->status.framesize;
   setFPS(frameData[fsizePtr].defaultFPS);
-
-  debugMemory("startSDtasks");
 }
 
 bool prepRecording() {
@@ -308,7 +304,6 @@ bool prepRecording() {
   startSDtasks();
   LOG_INF("Ready to record new AVI !");
   logLine();
-  debugMemory("prepRecording");
   return true;
 }
 

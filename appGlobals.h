@@ -14,26 +14,9 @@
 #define CAMERA_MODEL_XIAO_ESP32S3
 #endif
 
-/**************************************************************************/
-
-#define INCLUDE_TINYML false    // if true, requires relevant Edge Impulse TinyML Arduino library to be installed
-
-#define INCLUDE_DS18B20 false   // if true, requires additional libraries: OneWire and DallasTemperature
-
-#define ALLOW_SPACES false  // set true to allow whitespace in configs.txt key values
-
-// web server ports 
-#define HTTP_PORT 80 // insecure app access
-#define HTTPS_PORT 443 // secure app access
-
-
 /*********************** Fixed defines leave as is ***********************/ 
 /** Do not change anything below here unless you know what you are doing **/
 
-//#define DEV_ONLY // leave commented out
-#ifdef DEV_ONLY 
-//#define SIDE_ALARM // uncomment if used for side alarm
-#endif 
 #define STATIC_IP_OCTAL "133" // dev only
 #define DEBUG_MEM false // leave as false
 #define FLUSH_DELAY 0 // for debugging crashes

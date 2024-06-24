@@ -40,20 +40,6 @@ char* fmtSize (uint64_t sizeVal) {
   return returnStr;
 }
 
-void checkMemory(const char* source ) {
-  LOG_INF("%s Free: heap %u, block: %u, min: %u, pSRAM %u", source, ESP.getFreeHeap(), ESP.getMaxAllocHeap(), ESP.getMinFreeHeap(), ESP.getFreePsram());
-  if (ESP.getFreeHeap() < WARN_HEAP) LOG_WRN("Free heap only %u, min %u", ESP.getFreeHeap(), ESP.getMinFreeHeap());
-  if (ESP.getMaxAllocHeap() < WARN_ALLOC) LOG_WRN("Max allocatable heap block is only %u", ESP.getMaxAllocHeap());
-}
-
-void debugMemory(const char* caller) {
-  if (DEBUG_MEM) {
-    logPrint("%s > Free: heap %u, block: %u, min: %u, pSRAM %u\n", caller, ESP.getFreeHeap(), ESP.getMaxAllocHeap(), ESP.getMinFreeHeap(), ESP.getFreePsram());
-    delay(FLUSH_DELAY);
-  }
-}
-
-
 
 /*********************** loggging ***********************/
 
@@ -145,7 +131,6 @@ void logSetup() {
   if (mlogEnd >= RAM_LOG_LEN) ramLogClear(); // init
   LOG_INF("Setup RAM based log, size %u, starting from %u\n\n", RAM_LOG_LEN, mlogEnd);
   wakeupResetReason();
-  debugMemory("logSetup"); 
 }
 
 /****************** send device to sleep (light or deep) & watchdog ******************/
