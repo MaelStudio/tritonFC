@@ -5,72 +5,16 @@
 #pragma once
 #include "globals.h"
 
-// User's ESP32 cam board
-#if defined(CONFIG_IDF_TARGET_ESP32)
-#define CAMERA_MODEL_AI_THINKER 
-
-// User's ESP32S3 cam board
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
-#define CAMERA_MODEL_XIAO_ESP32S3
-#endif
-
 /*********************** Fixed defines leave as is ***********************/ 
 /** Do not change anything below here unless you know what you are doing **/
 
-#define STATIC_IP_OCTAL "133" // dev only
-#define DEBUG_MEM false // leave as false
-#define FLUSH_DELAY 0 // for debugging crashes
-#define DBG_ON false // esp debug output
-#define DOT_MAX 50
-//#define REPORT_IDLE // core processor idle time monitoring
- 
-#define APP_NAME "ESP-CAM_MJPEG" // max 15 chars
-#define APP_VER "9.3"
-
-#define HTTP_CLIENTS 2 // http, ws
-#define MAX_STREAMS 2 // stream, playback, download / NVR
-#define INDEX_PAGE_PATH DATA_DIR "/MJPEG2SD" HTML_EXT
 #define FILE_NAME_LEN 64
 #define IN_FILE_NAME_LEN (FILE_NAME_LEN * 2)
-#define JSON_BUFF_LEN (32 * 1024) // set big enough to hold all file names in a folder
-#define MAX_CONFIGS 160 // must be > number of entries in configs.txt
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
 #define FB_BUFFERS 12 // 1 being processed, rest being filled
-#else
-#define FB_BUFFERS 4 // 1 being processed, rest being filled
-#endif
 #define MAX_JPEG (ONEMEG / 2) // UXGA jpeg frame buffer at highest quality 375kB rounded up
-#define MIN_RAM 8 // min object size stored in ram instead of PSRAM default is 4096
-#define MAX_RAM 4096 // max object size stored in ram instead of PSRAM default is 4096
-#define TLS_HEAP (64 * 1024) // min free heap for TLS session
-#define WARN_HEAP (32 * 1024) // low free heap warning
-#define WARN_ALLOC (16 * 1024) // low free max allocatable free heap block
-#define MAX_FRAME_WAIT 1200
-#define RGB888_BYTES 3 // number of bytes per pixel
-#define GRAYSCALE_BYTES 1 // number of bytes per pixel 
 
-#ifdef SIDE_ALARM
-#define STORAGE LittleFS
-#define GITHUB_PATH ""
-#else
 #define STORAGE SD_MMC
-#define GITHUB_PATH "/s60sc/ESP32-CAM_MJPEG2SD/master"
-#endif
 #define RAMSIZE (1024 * 8) // set this to multiple of SD card sector size (512 or 1024 bytes)
-#define CHUNKSIZE (1024 * 4)
-#define INCLUDE_FTP_HFS
-#define INCLUDE_SMTP
-#define INCLUDE_MQTT
-#define INCLUDE_TGRAM
-#define ISCAM // cam specific code in generics
-
-#define IS_IO_EXTENDER false // must be false except for IO_Extender
-#define EXTPIN 100
-
-// to determine if newer data files need to be loaded
-#define CFG_VER 7
-#define HTM_VER 9
-#define JS_VER  4
 
 #define AVI_EXT "avi"
 #define CSV_EXT "csv"
@@ -79,95 +23,28 @@
 #define CHUNK_HDR 8 // bytes per jpeg hdr in AVI 
 #define WAVTEMP "/current.wav"
 #define AVITEMP "/current.avi"
-#define TLTEMP "/current.tl"
-#define TELETEMP "/current.csv"
-#define SRTTEMP "/current.srt"
 
-#define SD_MMC_CLK 7 
+#define SD_MMC_CLK 7
 #define SD_MMC_CMD 9
 #define SD_MMC_D0 8
 
-#ifdef CONFIG_IDF_TARGET_ESP32S3 
-#define SERVER_STACK_SIZE (1024 * 8)
-#define DS18B20_STACK_SIZE (1024 * 2)
-#define STICK_STACK_SIZE (1024 * 4)
-#else
-#define SERVER_STACK_SIZE (1024 * 4)
-#define DS18B20_STACK_SIZE (1024)
-#define STICK_STACK_SIZE (1024 * 2)
-#endif
-#define BATT_STACK_SIZE (1024 * 2)
 #define CAPTURE_STACK_SIZE (1024 * 4)
-#define EMAIL_STACK_SIZE (1024 * 6)
-#define FS_STACK_SIZE (1024 * 4)
-#define LOG_STACK_SIZE (1024 * 3)
-#define MIC_STACK_SIZE (1024 * 4)
-#define MQTT_STACK_SIZE (1024 * 4)
-#define PING_STACK_SIZE (1024 * 5)
-#define PLAYBACK_STACK_SIZE (1024 * 2)
-#define SERVO_STACK_SIZE (1024)
-#define SUSTAIN_STACK_SIZE (1024 * 4)
-#define TGRAM_STACK_SIZE (1024 * 5)
-#define TELEM_STACK_SIZE (1024 * 4)
-#define UART_STACK_SIZE (1024 * 2)
 
-/******************** Libraries *******************/
-
-#include "esp_camera.h"
-#include "camera_pins.h"
 
 /******************** Function declarations *******************/
-
-struct mjpegStruct {
-  size_t buffLen;
-  size_t buffOffset;
-  size_t jpegSize;
-};
-
-struct fnameStruct {
-  uint8_t recFPS;
-  uint32_t recDuration;
-  uint16_t frameCnt;
-};
 
 
 // global app specific functions
 
 void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt, bool isTL = false);
 void buildAviIdx(size_t dataSize, bool isVid = true, bool isTL = false);
-bool checkMotion(camera_fb_t* fb, bool motionStatus);
-bool checkSDFiles();
-void currentStackUsage();
-void doIOExtPing();
 void finalizeAviIndex(uint16_t frameCnt, bool isTL = false);
 void finishAudio(bool isValid);
-mjpegStruct getNextFrame(bool firstCall = false);
-bool getPIRval();
-bool haveWavFile(bool isTL = false);
-bool isNight(uint8_t nightSwitch);
-void keepFrame(camera_fb_t* fb);
-void motorSpeed(int speedVal);
-void openSDfile(const char* streamFile);
 void prepAviIndex(bool isTL = false);
 bool prepRecording();
-void prepTelemetry();
-void prepMic();
-void setCamPan(int panVal);
-void setCamTilt(int tiltVal);
 uint8_t setFPS(uint8_t val);
 uint8_t setFPSlookup(uint8_t val);
-void setLamp(uint8_t lampVal);
-void setLights(bool lightsOn);
-void setSteering(int steerVal);
-void startAudio();
-void startSustainTasks();
-void startTelemetry();
-void stickTimer(bool restartTimer);
-void stopPlaying();
-void stopSustainTask(int taskId);
-void stopTelemetry(const char* fileName);
 size_t writeAviIndex(byte* clientBuf, size_t buffSize, bool isTL = false);
-size_t writeWavFile(byte* clientBuf, size_t buffSize);
 
 /******************** Global app declarations *******************/
 
@@ -253,21 +130,6 @@ extern bool wakeUse;
 // task handling
 extern TaskHandle_t battHandle;
 extern TaskHandle_t captureHandle;
-extern TaskHandle_t DS18B20handle;
-extern TaskHandle_t emailHandle;
-extern TaskHandle_t fsHandle;
-extern TaskHandle_t logHandle;
-extern TaskHandle_t micHandle;
-extern TaskHandle_t mqttTaskHandle;
-extern TaskHandle_t playbackHandle;
-extern TaskHandle_t servoHandle;
-extern TaskHandle_t stickHandle;
-extern TaskHandle_t sustainHandle[];
-extern TaskHandle_t telegramHandle;
-extern TaskHandle_t telemetryHandle;
-extern TaskHandle_t uartClientHandle;
-extern SemaphoreHandle_t frameSemaphore[];
-extern SemaphoreHandle_t motionSemaphore;
 
 
 /************************** structures ********************************/

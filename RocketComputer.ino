@@ -8,15 +8,13 @@ bool startStorage() {
   bool res = SD_MMC.begin("/sdcard", true, true);
 
   if (!res) {
-    LOG_ERR("SD card mount failed");
-    snprintf(startupFailure, SF_LEN, "Startup Failure: Check SD card inserted");
+    Serial.println("[!] SD card mount failed.");
     return false;
   }
 
   uint8_t cardType = SD_MMC.cardType();
   if (cardType == CARD_NONE) {
-    LOG_WRN("No SD card attached");
-    snprintf(startupFailure, SF_LEN, "Startup Failure: Check SD card inserted");
+    Serial.println("[!] No SD card attached");
     return false;
   }
   else {
@@ -24,7 +22,7 @@ bool startStorage() {
     if (cardType == CARD_MMC) strcpy(typeStr, "MMC");
     else if (cardType == CARD_SD) strcpy(typeStr, "SDSC");
     else if (cardType == CARD_SDHC) strcpy(typeStr, "SDHC");
-    LOG_INF("SD card type %s, Size: %s", typeStr, fmtSize(SD_MMC.cardSize()));
+    Serial.printf("SD card mounted. Type: %s / Size: %s", typeStr, fmtSize(SD_MMC.cardSize()));
   }
 
   return res;
@@ -64,22 +62,24 @@ static void prepCam() {
   // camera init
   if (psramFound()) {
     esp_err_t err = esp_camera_init(&config);
-    if (err != ESP_OK) snprintf(startupFailure, SF_LEN, "Startup Failure: Camera init error 0x%x", err);
-    else {
-      LOG_INF("Camera init OK.");
+    if (err != ESP_OK) {
+      Serial.printf("[!] Camera init failed with error 0x%x", err);
+      while(true) {}
     }
+    
+    Serial.println("Camera initialized.");
   }
 }
 
 void setup() {
+  Serial.begin(115200);
   pinMode(D0, INPUT_PULLUP);
 
-  logSetup();
   startStorage();
   prepCam();
   prepRecording();
   
-  LOG_INF("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz);
+  Serial.printf("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz);
 }
 
 void loop() {

@@ -42,7 +42,6 @@ static char partName[FILE_NAME_LEN];
 // task control
 TaskHandle_t captureHandle = NULL;
 static SemaphoreHandle_t readSemaphore;
-SemaphoreHandle_t frameSemaphore[MAX_STREAMS] = {NULL};
 SemaphoreHandle_t aviMutex = NULL;
 bool isCapturing = false;
 
@@ -71,7 +70,7 @@ void controlFrameTimer(bool restartTimer) {
       frameInterval = OneMHz / FPS; // in units of us
       timerAttachInterrupt(frameTimer, &frameISR);
       timerAlarm(frameTimer, frameInterval, true, 0); // micro seconds
-    } else LOG_ERR("Failed to setup frameTimer");
+    } else Serial.println("[!] Failed to setup frameTimer");
   }
 }
 
@@ -87,7 +86,7 @@ static void openAvi() {
   // open avi file with temporary name 
   aviFile = STORAGE.open(AVITEMP, FILE_WRITE);
   oTime = millis() - oTime;
-  LOG_DBG("File opening time: %ums", oTime);
+  Serial.printf("File opening time: %ums", oTime);
   // initialisation of counters
   startTime = millis();
   frameCnt = fTimeTot = wTimeTot = dTimeTot = vidSize = 0;
@@ -124,7 +123,7 @@ static void saveFrame(camera_fb_t* fb) {
   } 
   wTime = millis() - wTime;
   wTimeTot += wTime;
-  LOG_DBG("SD storage time %u ms", wTime); 
+  Serial.printf("SD storage time %u ms", wTime);
   // whats left or small frame
   memcpy(iSDbuffer+highPoint, fb->buf + jpegSize - jpegRemain, jpegRemain);
   highPoint += jpegRemain;
@@ -134,16 +133,16 @@ static void saveFrame(camera_fb_t* fb) {
   frameCnt++; 
   fTime = millis() - fTime - wTime;
   fTimeTot += fTime;
-  LOG_DBG("Frame processing time %u ms", fTime);
-  LOG_DBG("============================");
+  Serial.printf("Frame processing time %u ms", fTime);
+  Serial.println("============================");
 }
 
 static bool closeAvi() {
   // closes the recorded file
   uint32_t vidDuration = millis() - startTime;
   uint32_t vidDurationSecs = lround(vidDuration/1000.0);
-  logLine();
-  LOG_DBG("Capture time %u, min seconds: %u ", vidDurationSecs, minSeconds);
+  Serial.println("");
+  Serial.printf("Capture time %u, min seconds: %u ", vidDurationSecs, minSeconds);
 
   cTime = millis();
   // write remaining frame content to SD
@@ -164,40 +163,40 @@ static bool closeAvi() {
   aviFile.seek(0, SeekSet); // start of file
   aviFile.write(aviHeader, AVI_HEADER_LEN); 
   aviFile.close();
-  LOG_DBG("Final SD storage time %lu ms", millis() - cTime);
+  Serial.printf("Final SD storage time %lu ms", millis() - cTime);
   uint32_t hTime = millis();
   if (vidDurationSecs >= minSeconds) {
     // name file to include actual dateTime, FPS, duration, and frame count
     int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%u_%u%s.%s",
       partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs, frameCnt, false ? "_S" : "", AVI_EXT);
-    if (alen > FILE_NAME_LEN - 1) LOG_WRN("file name truncated");
+    if (alen > FILE_NAME_LEN - 1) Serial.println("file name truncated");
     STORAGE.rename(AVITEMP, aviFileName);
-    LOG_DBG("AVI close time %lu ms", millis() - hTime); 
+    Serial.printf("AVI close time %lu ms", millis() - hTime); 
     cTime = millis() - cTime;
     
     // AVI stats
-    LOG_INF("******** AVI recording stats ********");
-    LOG_ALT("Recorded %s", aviFileName);
-    LOG_INF("AVI duration: %u secs", vidDurationSecs);
-    LOG_INF("Number of frames: %u", frameCnt);
-    LOG_INF("Required FPS: %u", FPS);
-    LOG_INF("Actual FPS: %0.1f", actualFPS);
-    LOG_INF("File size: %s", fmtSize(vidSize));
+    Serial.println("******** AVI recording stats ********");
+    Serial.printf("Recorded %s", aviFileName);
+    Serial.printf("AVI duration: %u secs", vidDurationSecs);
+    Serial.printf("Number of frames: %u", frameCnt);
+    Serial.printf("Required FPS: %u", FPS);
+    Serial.printf("Actual FPS: %0.1f", actualFPS);
+    Serial.printf("File size: %s", fmtSize(vidSize));
     if (frameCnt) {
-      LOG_INF("Average frame length: %u bytes", vidSize / frameCnt);
-      LOG_INF("Average frame monitoring time: %u ms", dTimeTot / frameCnt);
-      LOG_INF("Average frame buffering time: %u ms", fTimeTot / frameCnt);
-      LOG_INF("Average frame storage time: %u ms", wTimeTot / frameCnt);
+      Serial.printf("Average frame length: %u bytes", vidSize / frameCnt);
+      Serial.printf("Average frame monitoring time: %u ms", dTimeTot / frameCnt);
+      Serial.printf("Average frame buffering time: %u ms", fTimeTot / frameCnt);
+      Serial.printf("Average frame storage time: %u ms", wTimeTot / frameCnt);
     }
-    LOG_INF("Average SD write speed: %u kB/s", ((vidSize / wTimeTot) * 1000) / 1024);
-    LOG_INF("File open / completion times: %u ms / %u ms", oTime, cTime);
-    LOG_INF("Busy: %u%%", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
-    LOG_INF("*************************************");
+    Serial.printf("Average SD write speed: %u kB/s", ((vidSize / wTimeTot) * 1000) / 1024);
+    Serial.printf("File open / completion times: %u ms / %u ms", oTime, cTime);
+    Serial.printf("Busy: %u%%", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
+    Serial.println("*************************************");
     return true; 
   } else {
     // delete too small files if exist
     STORAGE.remove(AVITEMP);
-    LOG_INF("Insufficient capture duration: %u secs", vidDurationSecs); 
+    Serial.printf("Insufficient capture duration: %u secs", vidDurationSecs); 
     return false;
   }
 }
@@ -221,7 +220,7 @@ static boolean processFrame() {
     else if (!forceRecord && wasRecording) wasRecording = false;
     
     if (isCapturing && !wasCapturing) {
-      LOG_ALT("Capture started by Button");
+      Serial.println("Capture started");
       openAvi();
       wasCapturing = true;
     }
@@ -229,10 +228,10 @@ static boolean processFrame() {
       // capture is ongoing
       dTimeTot += millis() - dTime;
       saveFrame(fb);
-      showProgress();
+      showProgress('.');
       if (frameCnt >= maxFrames) {
-        logLine();
-        LOG_INF("Auto closed recording after %u frames", maxFrames);
+        Serial.println("");
+        Serial.printf("Auto closed recording after %u frames", maxFrames);
         forceRecord = false;
       }
     }
@@ -296,14 +295,14 @@ bool prepRecording() {
   readSemaphore = xSemaphoreCreateBinary();
   aviMutex = xSemaphoreCreateMutex();
   camera_fb_t* fb = esp_camera_fb_get();
-  if (fb == NULL) LOG_WRN("failed to get camera frame");
+  if (fb == NULL) Serial.println("failed to get camera frame");
   else {
     esp_camera_fb_return(fb);
     fb = NULL;
   }
   startSDtasks();
-  LOG_INF("Ready to record new AVI !");
-  logLine();
+  Serial.println("Ready to record new AVI !");
+  Serial.println("");
   return true;
 }
 
