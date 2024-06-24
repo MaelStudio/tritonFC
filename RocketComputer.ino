@@ -22,7 +22,7 @@ bool startStorage() {
     if (cardType == CARD_MMC) strcpy(typeStr, "MMC");
     else if (cardType == CARD_SD) strcpy(typeStr, "SDSC");
     else if (cardType == CARD_SDHC) strcpy(typeStr, "SDHC");
-    Serial.printf("SD card mounted. Type: %s / Size: %s", typeStr, fmtSize(SD_MMC.cardSize()));
+    Serial.printf("SD card mounted. Type: %s / Size: %s\n", typeStr, fmtSize(SD_MMC.cardSize()));
   }
 
   return res;
@@ -63,7 +63,7 @@ static void prepCam() {
   if (psramFound()) {
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
-      Serial.printf("[!] Camera init failed with error 0x%x", err);
+      Serial.printf("[!] Camera init failed with error 0x%x\n", err);
       while(true) {}
     }
     
@@ -79,7 +79,7 @@ void setup() {
   prepCam();
   prepRecording();
   
-  Serial.printf("Camera model %s on board %s ready @ %uMHz", camModel, CAM_BOARD, xclkMhz);
+  Serial.printf("Board ready @ %uMHz\n", xclkMhz);
 }
 
 void loop() {

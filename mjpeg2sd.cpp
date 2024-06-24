@@ -86,7 +86,6 @@ static void openAvi() {
   // open avi file with temporary name 
   aviFile = STORAGE.open(AVITEMP, FILE_WRITE);
   oTime = millis() - oTime;
-  Serial.printf("File opening time: %ums", oTime);
   // initialisation of counters
   startTime = millis();
   frameCnt = fTimeTot = wTimeTot = dTimeTot = vidSize = 0;
@@ -123,7 +122,6 @@ static void saveFrame(camera_fb_t* fb) {
   } 
   wTime = millis() - wTime;
   wTimeTot += wTime;
-  Serial.printf("SD storage time %u ms", wTime);
   // whats left or small frame
   memcpy(iSDbuffer+highPoint, fb->buf + jpegSize - jpegRemain, jpegRemain);
   highPoint += jpegRemain;
@@ -133,16 +131,12 @@ static void saveFrame(camera_fb_t* fb) {
   frameCnt++; 
   fTime = millis() - fTime - wTime;
   fTimeTot += fTime;
-  Serial.printf("Frame processing time %u ms", fTime);
-  Serial.println("============================");
 }
 
 static bool closeAvi() {
   // closes the recorded file
   uint32_t vidDuration = millis() - startTime;
   uint32_t vidDurationSecs = lround(vidDuration/1000.0);
-  Serial.println("");
-  Serial.printf("Capture time %u, min seconds: %u ", vidDurationSecs, minSeconds);
 
   cTime = millis();
   // write remaining frame content to SD
@@ -163,40 +157,39 @@ static bool closeAvi() {
   aviFile.seek(0, SeekSet); // start of file
   aviFile.write(aviHeader, AVI_HEADER_LEN); 
   aviFile.close();
-  Serial.printf("Final SD storage time %lu ms", millis() - cTime);
   uint32_t hTime = millis();
   if (vidDurationSecs >= minSeconds) {
     // name file to include actual dateTime, FPS, duration, and frame count
     int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%u_%u%s.%s",
       partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs, frameCnt, false ? "_S" : "", AVI_EXT);
-    if (alen > FILE_NAME_LEN - 1) Serial.println("file name truncated");
+    if (alen > FILE_NAME_LEN - 1) Serial.println("File name truncated");
     STORAGE.rename(AVITEMP, aviFileName);
-    Serial.printf("AVI close time %lu ms", millis() - hTime); 
     cTime = millis() - cTime;
     
     // AVI stats
+    Serial.println("");
     Serial.println("******** AVI recording stats ********");
-    Serial.printf("Recorded %s", aviFileName);
-    Serial.printf("AVI duration: %u secs", vidDurationSecs);
-    Serial.printf("Number of frames: %u", frameCnt);
-    Serial.printf("Required FPS: %u", FPS);
-    Serial.printf("Actual FPS: %0.1f", actualFPS);
-    Serial.printf("File size: %s", fmtSize(vidSize));
+    Serial.printf("Recorded %s\n", aviFileName);
+    Serial.printf("AVI duration: %u secs\n", vidDurationSecs);
+    Serial.printf("Number of frames: %u\n", frameCnt);
+    Serial.printf("Required FPS: %u\n", FPS);
+    Serial.printf("Actual FPS: %0.1f\n", actualFPS);
+    Serial.printf("File size: %s\n", fmtSize(vidSize));
     if (frameCnt) {
-      Serial.printf("Average frame length: %u bytes", vidSize / frameCnt);
-      Serial.printf("Average frame monitoring time: %u ms", dTimeTot / frameCnt);
-      Serial.printf("Average frame buffering time: %u ms", fTimeTot / frameCnt);
-      Serial.printf("Average frame storage time: %u ms", wTimeTot / frameCnt);
+      Serial.printf("Average frame length: %u bytes\n", vidSize / frameCnt);
+      Serial.printf("Average frame monitoring time: %u ms\n", dTimeTot / frameCnt);
+      Serial.printf("Average frame buffering time: %u ms\n", fTimeTot / frameCnt);
+      Serial.printf("Average frame storage time: %u ms\n", wTimeTot / frameCnt);
     }
-    Serial.printf("Average SD write speed: %u kB/s", ((vidSize / wTimeTot) * 1000) / 1024);
-    Serial.printf("File open / completion times: %u ms / %u ms", oTime, cTime);
-    Serial.printf("Busy: %u%%", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
+    Serial.printf("Average SD write speed: %u kB/s\n", ((vidSize / wTimeTot) * 1000) / 1024);
+    Serial.printf("File open / completion times: %u ms / %u ms\n", oTime, cTime);
+    Serial.printf("Busy: %u%%\n", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
     Serial.println("*************************************");
     return true; 
   } else {
     // delete too small files if exist
     STORAGE.remove(AVITEMP);
-    Serial.printf("Insufficient capture duration: %u secs", vidDurationSecs); 
+    Serial.printf("Insufficient capture duration: %u secs\n", vidDurationSecs); 
     return false;
   }
 }
@@ -228,10 +221,10 @@ static boolean processFrame() {
       // capture is ongoing
       dTimeTot += millis() - dTime;
       saveFrame(fb);
-      showProgress('.');
+      showProgress();
       if (frameCnt >= maxFrames) {
         Serial.println("");
-        Serial.printf("Auto closed recording after %u frames", maxFrames);
+        Serial.printf("Auto closed recording after %u frames\n", maxFrames);
         forceRecord = false;
       }
     }
@@ -301,8 +294,6 @@ bool prepRecording() {
     fb = NULL;
   }
   startSDtasks();
-  Serial.println("Ready to record new AVI !");
-  Serial.println("");
   return true;
 }
 
