@@ -100,20 +100,9 @@
 #define TELETEMP "/current.csv"
 #define SRTTEMP "/current.srt"
 
-// non default pins configured for SD card on given camera board
-#if defined(CAMERA_MODEL_ESP32S3_EYE) || defined(CAMERA_MODEL_FREENOVE_ESP32S3_CAM)
-#define SD_MMC_CLK 39 
-#define SD_MMC_CMD 38
-#define SD_MMC_D0 40
-#elif defined(CAMERA_MODEL_XIAO_ESP32S3)
 #define SD_MMC_CLK 7 
 #define SD_MMC_CMD 9
 #define SD_MMC_D0 8
-#elif defined(CAMERA_MODEL_TTGO_T_CAMERA_PLUS)
-#define SD_MMC_CLK 21 // SCLK
-#define SD_MMC_CMD 19 // MOSI
-#define SD_MMC_D0 22  // MISO
-#endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3 
 #define SERVER_STACK_SIZE (1024 * 8)
@@ -278,63 +267,6 @@ extern bool voltUse; // true to report on ADC pin eg for for battery
 extern bool micUse; // true to use external I2S microphone 
 extern bool wakeUse;
 
-// sensors 
-extern int pirPin; // if usePir is true
-extern bool pirVal;
-extern int lampPin; // if useLamp is true
-extern int wakePin; // if wakeUse is true
-extern int lightsPin;
-extern bool teleUse;
-extern int teleInterval;
-
-// Pan / Tilt Servos 
-extern int servoPanPin; // if useServos is true
-extern int servoTiltPin;
-// ambient / module temperature reading 
-extern int ds18b20Pin; // if INCLUDE_DS18B20 true
-// batt monitoring 
-extern int voltPin; 
-
-// microphone recording
-extern int micSckPin; // I2S SCK 
-extern int micSWsPin;  // I2S WS / PDM CLK
-extern int micSdPin;  // I2S SD / PDM DAT
-
-// configure for specific servo model, eg for SG90
-extern int servoDelay;
-extern int servoMinAngle; // degrees
-extern int servoMaxAngle;
-extern int servoMinPulseWidth; // usecs
-extern int servoMaxPulseWidth;
-extern int servoCenter;
-
-// battery monitor
-extern int voltDivider;
-extern float voltLow;
-extern int voltInterval;
-
-// audio
-extern const uint32_t SAMPLE_RATE; // audio sample rate
-extern const uint32_t WAV_HEADER_LEN;
-
-// RC
-extern bool RCactive;
-extern int motorRevPin;
-extern int motorFwdPin;
-extern int servoSteerPin;
-extern int lightsRCpin;
-extern int pwmFreq;
-extern int maxSteerAngle;  
-extern int maxDutyCycle;  
-extern int minDutyCycle;  
-extern bool allowReverse;   
-extern bool autoControl; 
-extern int waitTime; 
-extern bool stickUse;
-extern int stickzPushPin;
-extern int stickXpin; 
-extern int stickYpin; 
-
 // task handling
 extern TaskHandle_t battHandle;
 extern TaskHandle_t captureHandle;
@@ -345,7 +277,6 @@ extern TaskHandle_t logHandle;
 extern TaskHandle_t micHandle;
 extern TaskHandle_t mqttTaskHandle;
 extern TaskHandle_t playbackHandle;
-extern esp_ping_handle_t pingHandle;
 extern TaskHandle_t servoHandle;
 extern TaskHandle_t stickHandle;
 extern TaskHandle_t sustainHandle[];

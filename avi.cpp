@@ -5,34 +5,6 @@ Generate AVI format for recorded videos
 s60sc 2020, 2022
 */
 
-/* AVI file format:
-header:
- 310 bytes
-per jpeg:
- 4 byte 00dc marker
- 4 byte jpeg size
- jpeg frame content
-0-3 bytes filler to align on DWORD boundary
-per PCM (audio file)
- 4 byte 01wb marker
- 4 byte pcm size
- pcm content
- 0-3 bytes filler to align on DWORD boundary
-footer:
- 4 byte idx1 marker
- 4 byte index size
- per jpeg:
-  4 byte 00dc marker
-  4 byte 0000
-  4 byte jpeg location
-  4 byte jpeg size
- per pcm:
-  4 byte 01wb marker
-  4 byte 0000
-  4 byte pcm location
-  4 byte pcm size
-*/
-
 #include "appGlobals.h"
 
 // avi header data
