@@ -96,8 +96,8 @@ static size_t idxOffset[2];
 static size_t moviSize[2];
 static size_t audSize;
 static size_t indexLen[2];
-static File wavFile;
 bool haveSoundFile = false;
+const uint32_t SAMPLE_RATE = 16000; // sample rate used
 
 
 void prepAviIndex(bool isTL) {
@@ -180,42 +180,4 @@ void finalizeAviIndex(uint16_t frameCnt, bool isTL) {
   memcpy(idxBuf[isTL]+4, &sizeOfIndex, 4); // size of index 
   indexLen[isTL] = sizeOfIndex + CHUNK_HDR;
   idxPtr[isTL] = 0; // pointer to index buffer
-}
-
-bool haveWavFile(bool isTL) {
-  haveSoundFile = false;
-  if (isTL) return false;
-  // check if wave file exists
-  if (!STORAGE.exists(WAVTEMP)) return 0; 
-  // open it and get its size
-  audSize = 0;
-  wavFile = STORAGE.open(WAVTEMP, FILE_READ);
-  if (wavFile) {
-    // add sound file index
-    audSize = wavFile.size() - WAV_HEADER_LEN;
-    buildAviIdx(audSize, false); 
-    // add sound file header    
-    wavFile.seek(WAV_HEADER_LEN, SeekSet); // skip over header
-    haveSoundFile = true;
-  } 
-  return haveSoundFile;
-}
-
-size_t writeWavFile(byte* clientBuf, size_t buffSize) {
-  // read in wav file and write to avi file
-  // called repeatedly from closeAvi() until return 0
-  static size_t offsetWav = CHUNK_HDR;
-  if (offsetWav) {
-    // add sound file header         
-    memcpy(clientBuf, wbBuf, 4);     
-    memcpy(clientBuf+4, &audSize, 4); 
-  } 
-  size_t readLen = wavFile.read(clientBuf+offsetWav, buffSize-offsetWav) + offsetWav; 
-  offsetWav = 0;
-  if (readLen) return readLen; 
-  // get here if finished
-  wavFile.close();
-  STORAGE.remove(WAVTEMP);
-  offsetWav = CHUNK_HDR;
-  return 0;
 }
