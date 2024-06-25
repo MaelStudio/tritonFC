@@ -4,7 +4,6 @@
 
 /******************** Libraries *******************/
 
-#include "Arduino.h"
 #include "SD_MMC.h"
 #include "esp_camera.h"
 
