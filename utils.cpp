@@ -1,6 +1,4 @@
-#include "appGlobals.h"
-
-bool dbgVerbose = false;
+#include "globals.h"
 
 /********************** misc functions ************************/
 

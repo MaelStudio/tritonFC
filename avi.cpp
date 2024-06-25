@@ -4,7 +4,7 @@ Generate AVI format for recorded videos
 s60sc 2020, 2022
 */
 
-#include "appGlobals.h"
+#include "globals.h"
 
 // avi header data
 const uint8_t dcBuf[4] = {0x30, 0x30, 0x64, 0x63};   // 00dc
