@@ -36,20 +36,19 @@
 
 /******************** Constants *******************/
 
-#define FILE_NAME_LEN 64
-#define FB_BUFFERS 12 // 1 being processed, rest being filled
-#define ONEMEG (1024 * 1024)
-#define MAX_JPEG (ONEMEG / 2) // UXGA jpeg frame buffer at highest quality 375kB rounded up
-#define RAMSIZE (1024 * 8) // set this to multiple of SD card sector size (512 or 1024 bytes)
-
 #define AVI_EXT "avi"
 #define CSV_EXT "csv"
-#define AVI_HEADER_LEN 310 // AVI header length
-#define CHUNK_HDR 8 // bytes per jpeg hdr in AVI 
 #define WAVTEMP "/current.wav"
 #define AVITEMP "/current.avi"
 
+#define FILE_NAME_LEN 64
+#define RAMSIZE (1024 * 8) // set this to multiple of SD card sector size (512 or 1024 bytes)
+#define FB_BUFFERS 12 // 1 being processed, rest being filled
+#define ONEMEG (1024 * 1024)
+#define MAX_JPEG (ONEMEG / 2) // UXGA jpeg frame buffer at highest quality 375kB rounded up
 #define CAPTURE_STACK_SIZE (1024 * 4)
+#define AVI_HEADER_LEN 310 // AVI header length
+#define CHUNK_HDR 8 // bytes per jpeg hdr in AVI 
 
 /******************** Variables *******************/
 
