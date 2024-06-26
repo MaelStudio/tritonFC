@@ -35,7 +35,6 @@ static uint32_t cTime; // file closing time
 
 // task control
 TaskHandle_t captureHandle = NULL;
-static SemaphoreHandle_t readSemaphore;
 SemaphoreHandle_t aviMutex = NULL;
 bool isCapturing = false;
 
@@ -318,7 +317,6 @@ static void startSDtasks() {
 
 bool prepRecording() {
   // initialisation & prep for AVI capture
-  readSemaphore = xSemaphoreCreateBinary();
   aviMutex = xSemaphoreCreateMutex();
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL) Serial.println("[!] Failed to get camera frame");
