@@ -54,16 +54,13 @@
 /******************** Variables *******************/
 
 extern bool forceRecord; // true to start recording / false to end ongoing recording
-extern time_t currEpoch;
 extern int maxFrames;
 extern uint8_t aviHeader[];
 extern const uint8_t dcBuf[]; // 00dc
 
 /******************** Function declarations *******************/
 
-time_t getEpoch();
 void showProgress(const char* marker = ".");
-void dateFormat(char* inBuff, size_t inBuffLen, bool isFolder);
 char* fmtSize (uint64_t sizeVal);
 bool startStorage();
 bool startCam();
