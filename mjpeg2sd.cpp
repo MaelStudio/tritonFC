@@ -6,10 +6,17 @@
 
 #include "globals.h"
 
-bool forceRecord = false; // Recording enabled by rec button
+// SD card storage
+uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
+static size_t highPoint;
+static File aviFile;
+static char aviFileName[FILE_NAME_LEN];
+static char folderName[FILE_NAME_LEN] = "recordings";
 
 // status & control fields
+bool forceRecord = false; // Recording enabled by rec button
 int maxFrames = 20000; // maximum number of frames in video before auto close 
+static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
 uint8_t fsizePtr; // index to frameData[]
 uint8_t minSeconds = 5; // default min video length (includes POST_MOTION_TIME)
@@ -25,16 +32,6 @@ static uint32_t fTimeTot; // total frame buffering time
 static uint32_t wTimeTot; // total SD write time
 static uint32_t oTime; // file opening time
 static uint32_t cTime; // file closing time
-
-uint8_t frameDataRows = 14; // number of frame sizes
-static uint16_t frameInterval; // units of 0.1ms between frames
-
-// SD card storage
-uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
-static size_t highPoint;
-static File aviFile;
-static char aviFileName[FILE_NAME_LEN];
-static char partName[FILE_NAME_LEN];
 
 // task control
 TaskHandle_t captureHandle = NULL;
@@ -74,12 +71,9 @@ void controlFrameTimer(bool restartTimer) {
 /**************** capture AVI  ************************/
 
 static void openAvi() {
-  // derive filename from date & time, store in date folder
   // time to open a new file on SD increases with the number of files already present
   oTime = millis();
-  dateFormat(partName, sizeof(partName), true);
-  SD_MMC.mkdir(partName); // make date folder if not present
-  dateFormat(partName, sizeof(partName), false);
+  SD_MMC.mkdir(folderName);
   // open avi file with temporary name 
   aviFile = SD_MMC.open(AVITEMP, FILE_WRITE);
   oTime = millis() - oTime;
@@ -155,9 +149,8 @@ static bool closeAvi() {
   aviFile.write(aviHeader, AVI_HEADER_LEN); 
   aviFile.close();
   if (vidDurationSecs >= minSeconds) {
-    // name file to include actual dateTime, FPS, duration, and frame count
-    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%s_%u_%u_%u%s.%s",
-      partName, frameData[fsizePtr].frameSizeStr, actualFPSint, vidDurationSecs, frameCnt, false ? "_S" : "", AVI_EXT);
+    // name file
+    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%u.%s", frameData[fsizePtr].frameSizeStr, frameCnt, AVI_EXT);
     if (alen > FILE_NAME_LEN - 1) Serial.println("File name truncated");
     SD_MMC.rename(AVITEMP, aviFileName);
     cTime = millis() - cTime;
@@ -344,4 +337,27 @@ static void deleteTask(TaskHandle_t thisTaskHandle) {
 
 void endTasks() {
   deleteTask(captureHandle);
+}
+
+/****** misc ******/
+
+void showProgress(const char* marker) {
+  // show progess as dots 
+  static uint8_t dotCnt = 0;
+  Serial.print(marker); // progress marker
+  if (++dotCnt >= 30) {
+    dotCnt = 0;
+    Serial.println("");
+  }
+}
+
+char* fmtSize (uint64_t sizeVal) {
+  // format size according to magnitude
+  // only one call per format string
+  static char returnStr[20];
+  if (sizeVal < 50 * 1024) sprintf(returnStr, "%llu bytes", sizeVal);
+  else if (sizeVal < ONEMEG) sprintf(returnStr, "%lluKB", sizeVal / 1024);
+  else if (sizeVal < ONEMEG * 1024) sprintf(returnStr, "%0.1fMB", (double)(sizeVal) / ONEMEG);
+  else sprintf(returnStr, "%0.1fGB", (double)(sizeVal) / (ONEMEG * 1024));
+  return returnStr;
 }
