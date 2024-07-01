@@ -12,7 +12,7 @@ uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
 static size_t highPoint;
 static File aviFile;
 static char aviFileName[FILE_NAME_LEN];
-static char folderName[FILE_NAME_LEN] = "recordings";
+static char dirName[FILE_NAME_LEN] = "/recordings";
 
 // status & control fields
 bool forceRecord = false; // Recording enabled by rec button
@@ -73,7 +73,7 @@ void controlFrameTimer(bool restartTimer) {
 static void openAvi() {
   // time to open a new file on SD increases with the number of files already present
   oTime = millis();
-  SD_MMC.mkdir(folderName);
+  SD_MMC.mkdir(dirName);
   // open avi file with temporary name 
   aviFile = SD_MMC.open(AVITEMP, FILE_WRITE);
   oTime = millis() - oTime;
@@ -150,7 +150,7 @@ static bool closeAvi() {
   aviFile.close();
   if (vidDurationSecs >= minSeconds) {
     // name file
-    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s_%u.%s", frameData[fsizePtr].frameSizeStr, frameCnt, AVI_EXT);
+    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s/%s_%u.%s", dirName, frameData[fsizePtr].frameSizeStr, frameCnt, AVI_EXT);
     if (alen > FILE_NAME_LEN - 1) Serial.println("File name truncated");
     SD_MMC.rename(AVITEMP, aviFileName);
     cTime = millis() - cTime;
