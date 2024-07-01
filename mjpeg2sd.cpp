@@ -38,74 +38,6 @@ TaskHandle_t captureHandle = NULL;
 SemaphoreHandle_t aviMutex = NULL;
 bool isCapturing = false;
 
-/******************* Startup ********************/
-
-bool startStorage() {
-  SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
-  return SD_MMC.begin("/sdcard", true, true);
-}
-
-bool startCam() {
-  // configure camera
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sccb_sda = SIOD_GPIO_NUM;
-  config.pin_sccb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = xclkMhz * 1000000;
-  config.pixel_format = PIXFORMAT_JPEG;
-  config.grab_mode = CAMERA_GRAB_LATEST;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.fb_count = FB_BUFFERS;
-
-  config.frame_size = FRAMESIZE_HVGA; // image res
-  config.jpeg_quality = 10; //0-63, lower number = higher quality
-
-  // camera init
-  if (psramFound()) {
-    esp_err_t err = esp_camera_init(&config);
-    return err == ESP_OK;  
-  }
-
-  return false;
-}
-
-static void startSDtasks() {
-  // tasks to manage SD card operation
-  xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, 5, &captureHandle);
-  
-  sensor_t * s = esp_camera_sensor_get();
-  fsizePtr = s->status.framesize;
-  setFPS(frameData[fsizePtr].defaultFPS);
-}
-
-bool prepRecording() {
-  // initialisation & prep for AVI capture
-  aviMutex = xSemaphoreCreateMutex();
-  camera_fb_t* fb = esp_camera_fb_get();
-  if (fb == NULL) Serial.println("[!] Failed to get camera frame");
-  else {
-    esp_camera_fb_return(fb);
-    fb = NULL;
-  }
-  startSDtasks();
-  return true;
-}
-
 /**************** timers & ISRs ************************/
 
 static void IRAM_ATTR frameISR() {
@@ -328,6 +260,73 @@ uint8_t setFPSlookup(uint8_t val) {
   return setFPS(frameData[fsizePtr].defaultFPS);
 }
 
+/******************* Startup ********************/
+
+bool startStorage() {
+  SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
+  return SD_MMC.begin("/sdcard", true, true);
+}
+
+bool startCam() {
+  // configure camera
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = xclkMhz * 1000000;
+  config.pixel_format = PIXFORMAT_JPEG;
+  config.grab_mode = CAMERA_GRAB_LATEST;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.fb_count = FB_BUFFERS;
+
+  config.frame_size = FRAMESIZE_HVGA; // image res
+  config.jpeg_quality = 10; //0-63, lower number = higher quality
+
+  // camera init
+  if (psramFound()) {
+    esp_err_t err = esp_camera_init(&config);
+    return err == ESP_OK;  
+  }
+
+  return false;
+}
+
+static void startSDtasks() {
+  // tasks to manage SD card operation
+  xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, 5, &captureHandle);
+  
+  sensor_t * s = esp_camera_sensor_get();
+  fsizePtr = s->status.framesize;
+  setFPS(frameData[fsizePtr].defaultFPS);
+}
+
+bool prepRecording() {
+  // initialisation & prep for AVI capture
+  aviMutex = xSemaphoreCreateMutex();
+  camera_fb_t* fb = esp_camera_fb_get();
+  if (fb == NULL) Serial.println("[!] Failed to get camera frame");
+  else {
+    esp_camera_fb_return(fb);
+    fb = NULL;
+  }
+  startSDtasks();
+  return true;
+}
 
 /****** misc ******/
 
