@@ -19,7 +19,6 @@ int maxFrames = 20000; // maximum number of frames in video before auto close
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
 uint8_t fsizePtr; // index to frameData[]
-uint8_t minSeconds = 5; // default min video length (includes POST_MOTION_TIME)
 uint8_t xclkMhz = 20; // camera clock rate MHz
 #define OneMHz 1000000
 
@@ -144,39 +143,32 @@ static bool closeAvi() {
   aviFile.seek(0, SeekSet); // start of file
   aviFile.write(aviHeader, AVI_HEADER_LEN); 
   aviFile.close();
-  if (vidDurationSecs >= minSeconds) {
-    // name file
-    int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s/%s_%u.%s", dirName, frameData[fsizePtr].frameSizeStr, frameCnt, AVI_EXT);
-    if (alen > FILE_NAME_LEN - 1) Serial.println("File name truncated");
-    SD_MMC.rename(AVITEMP, aviFileName);
-    cTime = millis() - cTime;
-    
-    // AVI stats
-    Serial.println("");
-    Serial.println("******** AVI recording stats ********");
-    Serial.printf("Recorded %s\n", aviFileName);
-    Serial.printf("AVI duration: %u secs\n", vidDurationSecs);
-    Serial.printf("Number of frames: %u\n", frameCnt);
-    Serial.printf("Required FPS: %u\n", FPS);
-    Serial.printf("Actual FPS: %0.1f\n", actualFPS);
-    Serial.printf("File size: %s\n", fmtSize(vidSize));
-    if (frameCnt) {
-      Serial.printf("Average frame length: %u bytes\n", vidSize / frameCnt);
-      Serial.printf("Average frame monitoring time: %u ms\n", dTimeTot / frameCnt);
-      Serial.printf("Average frame buffering time: %u ms\n", fTimeTot / frameCnt);
-      Serial.printf("Average frame storage time: %u ms\n", wTimeTot / frameCnt);
-    }
-    Serial.printf("Average SD write speed: %u kB/s\n", ((vidSize / wTimeTot) * 1000) / 1024);
-    Serial.printf("File open / completion times: %u ms / %u ms\n", oTime, cTime);
-    Serial.printf("Busy: %u%%\n", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
-    Serial.println("*************************************");
-    return true; 
-  } else {
-    // delete too small files if exist
-    SD_MMC.remove(AVITEMP);
-    Serial.printf("Insufficient capture duration: %u secs\n", vidDurationSecs); 
-    return false;
+  // name file
+  int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s/%s_%u.%s", dirName, frameData[fsizePtr].frameSizeStr, frameCnt, AVI_EXT);
+  if (alen > FILE_NAME_LEN - 1) Serial.println("File name truncated");
+  SD_MMC.rename(AVITEMP, aviFileName);
+  cTime = millis() - cTime;
+  
+  // AVI stats
+  Serial.println("");
+  Serial.println("******** AVI recording stats ********");
+  Serial.printf("Recorded %s\n", aviFileName);
+  Serial.printf("AVI duration: %u secs\n", vidDurationSecs);
+  Serial.printf("Number of frames: %u\n", frameCnt);
+  Serial.printf("Required FPS: %u\n", FPS);
+  Serial.printf("Actual FPS: %0.1f\n", actualFPS);
+  Serial.printf("File size: %s\n", fmtSize(vidSize));
+  if (frameCnt) {
+    Serial.printf("Average frame length: %u bytes\n", vidSize / frameCnt);
+    Serial.printf("Average frame monitoring time: %u ms\n", dTimeTot / frameCnt);
+    Serial.printf("Average frame buffering time: %u ms\n", fTimeTot / frameCnt);
+    Serial.printf("Average frame storage time: %u ms\n", wTimeTot / frameCnt);
   }
+  Serial.printf("Average SD write speed: %u kB/s\n", ((vidSize / wTimeTot) * 1000) / 1024);
+  Serial.printf("File open / completion times: %u ms / %u ms\n", oTime, cTime);
+  Serial.printf("Busy: %u%%\n", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
+  Serial.println("*************************************");
+  return true;
 }
 
 static boolean processFrame() {
