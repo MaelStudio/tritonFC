@@ -1,4 +1,3 @@
-#include "sensor.h"
 /*
 * Capture ESP32 Cam JPEG images into a AVI file and store on SD card.
 *
@@ -36,7 +35,6 @@ static uint32_t cTime; // file closing time
 
 // task control
 TaskHandle_t captureHandle = NULL;
-SemaphoreHandle_t aviMutex = NULL;
 bool isCapturing = false;
 
 /**************** timers & ISRs ************************/
@@ -141,10 +139,8 @@ static bool closeAvi() {
   } while (readLen > 0);
   // save avi header at start of file
   float actualFPS = (1000.0f * (float)frameCnt) / ((float)vidDuration);
-  uint8_t actualFPSint = (uint8_t)(lround(actualFPS));  
-  xSemaphoreTake(aviMutex, portMAX_DELAY);
+  uint8_t actualFPSint = (uint8_t)(lround(actualFPS));
   buildAviHdr(actualFPSint, fsizePtr, frameCnt);
-  xSemaphoreGive(aviMutex); 
   aviFile.seek(0, SeekSet); // start of file
   aviFile.write(aviHeader, AVI_HEADER_LEN); 
   aviFile.close();
@@ -318,7 +314,6 @@ static void startSDtasks() {
 
 bool prepRecording() {
   // initialisation & prep for AVI capture
-  aviMutex = xSemaphoreCreateMutex();
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL) Serial.println("[!] Failed to get camera frame");
   else {
