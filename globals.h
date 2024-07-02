@@ -1,11 +1,4 @@
-// Global MJPEG2SD declarations
-//
-// s60sc 2021, 2022
-
-/******************** Libraries *******************/
-
-#include "SD_MMC.h"
-#include "esp_camera.h"
+#include <Arduino.h>
 
 /******************** Pins *******************/
 
