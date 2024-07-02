@@ -1,9 +1,3 @@
-/* 
-Generate AVI format for recorded videos
-
-s60sc 2020, 2022
-*/
-
 #include "globals.h"
 
 // avi header data
