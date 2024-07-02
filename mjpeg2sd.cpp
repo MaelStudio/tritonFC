@@ -1,10 +1,6 @@
-/*
-* Capture ESP32 Cam JPEG images into a AVI file and store on SD card.
-*
-* s60sc 2020, 2022
-*/
-
 #include "globals.h"
+#include <esp_camera.h>
+#include <SD_MMC.h>
 
 // SD card storage
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
@@ -287,12 +283,9 @@ bool startCam() {
   config.jpeg_quality = 4; //0-63, lower number = higher quality
 
   // camera init
-  if (psramFound()) {
-    esp_err_t err = esp_camera_init(&config);
-    return err == ESP_OK;  
-  }
+  esp_err_t err = esp_camera_init(&config);
+  return err == ESP_OK;
 
-  return false;
 }
 
 static void startSDtasks() {
@@ -307,11 +300,10 @@ static void startSDtasks() {
 bool prepRecording() {
   // initialisation & prep for AVI capture
   camera_fb_t* fb = esp_camera_fb_get();
-  if (fb == NULL) Serial.println("[!] Failed to get camera frame");
-  else {
-    esp_camera_fb_return(fb);
-    fb = NULL;
-  }
+  if (fb == NULL) return false;
+
+  esp_camera_fb_return(fb);
+  fb = NULL;
   startSDtasks();
   return true;
 }
