@@ -47,4 +47,8 @@ void loop() {
   float pressure = bmp.readPressure();
   float altitude = bmp.readAltitude(SEA_LEVEL_HPA);
   float temp = bmp.readTemperature();
+
+  if (digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
+    Serial.println("Launch!");
+  }
 }
