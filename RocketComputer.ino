@@ -3,12 +3,23 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_BMP280.h>
 #include <SD_MMC.h>
+#include <ESP32Servo.h>
 
-Adafruit_MPU6050 mpu;
-Adafruit_BMP280 bmp;
 
+// pins
+#define LAUNCH_SW_PIN D0
+#define SERVO_PIN D1
+
+// constants
 #define SEA_LEVEL_HPA 1005.00
 #define APOGEE_ALTITUDE_DIFF 1 // in meters, difference between highest recorded altitude and current altitude to trigger apogee detection
+#define SERVO_HOME 0
+#define SERVO_DEPLOY 180
+
+// variables
+Adafruit_MPU6050 mpu;
+Adafruit_BMP280 bmp;
+Servo servo;
 
 float highestAltitude = 0;
 bool liftoff = false;
@@ -18,6 +29,7 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(D0, INPUT_PULLUP);
+  servo.attach(SERVO_PIN);
 
   if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
   else Serial.println("[!] SD card initialization failed");
@@ -46,8 +58,9 @@ void setup() {
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_1);   /* Standby time. */
   
+  
+  servo.write(SERVO_HOME);
   Serial.println("Setup complete");
-
 }
 
 void loop() {
@@ -71,6 +84,7 @@ void loop() {
       highestAltitude = altitude;
     }else if (highestAltitude - altitude > APOGEE_ALTITUDE_DIFF) {
       apogee = true;
+      servo.write(SERVO_DEPLOY);
       Serial.println("[*] Apogee!");
     }
   }
