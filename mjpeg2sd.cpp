@@ -290,7 +290,7 @@ bool startCam() {
 
 static void startSDtasks() {
   // tasks to manage SD card operation
-  xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, 5, &captureHandle);
+  xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, 1, &captureHandle);
   
   sensor_t * s = esp_camera_sensor_get();
   fsizePtr = s->status.framesize;
