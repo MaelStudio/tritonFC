@@ -7,7 +7,7 @@
 Adafruit_MPU6050 mpu;
 Adafruit_BMP280 bmp;
 
-#define SEA_LEVEL_HPA 1021.50
+#define SEA_LEVEL_HPA 1005.00
 
 void setup() {
   Serial.begin(115200);
@@ -36,6 +36,7 @@ void setup() {
   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
   
   Serial.println("Setup complete");
+
 }
 
 void loop() {
@@ -48,7 +49,7 @@ void loop() {
   float altitude = bmp.readAltitude(SEA_LEVEL_HPA);
   float temp = bmp.readTemperature();
 
-  if (digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
+  if (!digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
     Serial.println("Launch!");
   }
 }
