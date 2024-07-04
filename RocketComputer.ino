@@ -26,7 +26,7 @@ float highestAltitude = 0;
 bool liftoff = false;
 bool apogee = false;
 
-bool initAll() {
+bool init() {
 
   if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
   else {
@@ -68,7 +68,7 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   servo.attach(SERVO_PIN);
 
-  if (!initAll()) {
+  if (!init()) {
     while (1) {
       tone(BUZZER_PIN, 800, 80);
       delay(100);
