@@ -9,6 +9,7 @@
 // pins
 #define LAUNCH_SW_PIN D0
 #define SERVO_PIN D1
+#define BUZZER_PIN D2
 
 // constants
 #define SEA_LEVEL_HPA 1005.00
@@ -25,28 +26,57 @@ float highestAltitude = 0;
 bool liftoff = false;
 bool apogee = false;
 
+bool initAll() {
+  
+  return (startStorage() && startCam() && prepRecording() && mpu.begin() && bmp.begin(0x76));
+
+  /*
+  if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
+  else {
+    Serial.println("[!] SD card initialization failed");
+    return false;
+  }
+
+  if (startCam()) Serial.println("Camera initialized");
+  else {
+    Serial.println("[!] Camera init failed");
+    return false;
+  }
+
+  if (prepRecording()) Serial.println("Ready to record");
+  else {
+    Serial.println("[!] Failed to get camera frame");
+    return false;
+  }
+
+  if (mpu.begin()) Serial.println("MPU6050 initialized");
+  else {
+    Serial.println("[!] MPU6050 init failed");
+    return false;
+  }
+
+  if (bmp.begin(0x76)) Serial.println("BMP280 initialized");
+  else {
+    Serial.println("[!] BMP280 init failed");
+    return false;
+  }
+  return true
+  */
+}
+
 void setup() {
   Serial.begin(115200);
 
-  pinMode(D0, INPUT_PULLUP);
+  pinMode(LAUNCH_SW_PIN, INPUT_PULLUP);
+  pinMode(BUZZER_PIN, OUTPUT);
   servo.attach(SERVO_PIN);
 
-  if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
-  else Serial.println("[!] SD card initialization failed");
-
-  if (!psramFound()) Serial.println("[!] PSRAM is disabled");
-
-  if (startCam()) Serial.println("Camera initialized");
-  else Serial.println("[!] Camera init failed");
-
-  if (prepRecording()) Serial.println("Ready to record");
-  else Serial.println("[!] Failed to get camera frame");
-
-  if (mpu.begin()) Serial.println("MPU6050 initialized");
-  else Serial.println("[!] MPU6050 init failed");
-
-  if (bmp.begin(0x76)) Serial.println("BMP280 initialized");
-  else Serial.println("[!] BMP280 init failed");
+  if (!initAll()) {
+    while (1) {
+      tone(BUZZER_PIN, 800, 80);
+      delay(100);
+    }
+  }
 
   mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
   mpu.setGyroRange(MPU6050_RANGE_250_DEG);
