@@ -8,6 +8,11 @@ Adafruit_MPU6050 mpu;
 Adafruit_BMP280 bmp;
 
 #define SEA_LEVEL_HPA 1005.00
+#define APOGEE_ALTITUDE_DIFF 1 // in meters, difference between highest recorded altitude and current altitude to trigger apogee detection
+
+float highestAltitude = 0;
+bool liftoff = false;
+bool apogee = false;
 
 void setup() {
   Serial.begin(115200);
@@ -46,6 +51,12 @@ void setup() {
 }
 
 void loop() {
+
+  if (!liftoff && !digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
+    liftoff = true;
+    Serial.println("[*] Liftoff!");
+  }
+
   // get IMU data
   sensors_event_t accel, gyro, t;
   mpu.getEvent(&accel, &gyro, &t);
@@ -55,7 +66,13 @@ void loop() {
   float altitude = bmp.readAltitude(SEA_LEVEL_HPA);
   float temp = bmp.readTemperature();
 
-  if (!digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
-    Serial.println("Launch!");
+  if (liftoff && !apogee) {
+    if (altitude > highestAltitude) {
+      highestAltitude = altitude;
+    }else if (highestAltitude - altitude > APOGEE_ALTITUDE_DIFF) {
+      apogee = true;
+      Serial.println("[*] Apogee!");
+    }
   }
+
 }
