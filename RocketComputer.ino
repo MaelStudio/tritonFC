@@ -27,10 +27,7 @@ bool liftoff = false;
 bool apogee = false;
 
 bool initAll() {
-  
-  return (startStorage() && startCam() && prepRecording() && mpu.begin() && bmp.begin(0x76));
 
-  /*
   if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
   else {
     Serial.println("[!] SD card initialization failed");
@@ -60,8 +57,8 @@ bool initAll() {
     Serial.println("[!] BMP280 init failed");
     return false;
   }
-  return true
-  */
+
+  return true;
 }
 
 void setup() {
