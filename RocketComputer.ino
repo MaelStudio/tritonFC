@@ -1,23 +1,26 @@
 #include "globals.h"
+
+// Libraries
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_BMP280.h>
 #include <SD_MMC.h>
 #include <ESP32Servo.h>
+#include <CircularBuffer.h>
 
-
-// pins
-#define LAUNCH_SW_PIN D0
+// Pins
 #define SERVO_PIN D1
 #define BUZZER_PIN D2
 
-// constants
+// Constants
+#define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection. the average of the last N values will be compared with LAUNCH_DETECT_THRESHOLD
+#define LAUNCH_DETECT_THRESHOLD 11.0 // In m/s^2 the vertical acceleration required to trigger launch detection
+#define APOGEE_DETECT_THRESHOLD 1.0 // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
 #define SEA_LEVEL_HPA 1005.00
-#define APOGEE_ALTITUDE_DIFF 1 // in meters, difference between highest recorded altitude and current altitude to trigger apogee detection
 #define SERVO_HOME 0
 #define SERVO_DEPLOY 180
 
-// variables
+// Variables
 Adafruit_MPU6050 mpu;
 Adafruit_BMP280 bmp;
 Servo servo;
@@ -25,6 +28,9 @@ Servo servo;
 float highestAltitude = 0;
 bool launch = false;
 bool apogee = false;
+
+// Define circular buffer for vertical acceleration readings
+CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer;
 
 bool initAll() {
 
@@ -64,11 +70,10 @@ bool initAll() {
 void setup() {
   Serial.begin(115200);
 
-  pinMode(LAUNCH_SW_PIN, INPUT_PULLUP);
   pinMode(BUZZER_PIN, OUTPUT);
   servo.attach(SERVO_PIN);
 
-  // alarm if initialization fails
+  // Alarm if initialization fails
   if (!initAll()) { 
     while (1) {
       tone(BUZZER_PIN, 2000, 120);
@@ -76,25 +81,25 @@ void setup() {
     }
   }
 
-  // set MPU6050 range
+  // Set MPU6050 range
   mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
   mpu.setGyroRange(MPU6050_RANGE_250_DEG);
   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 
-  // set BMP280 sampling mode
+  // Set BMP280 sampling mode
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_1);   /* Standby time. */
   
-  // set servo orientation
+  // Set servo orientation
   servo.write(SERVO_HOME);
   delay(500);
 
   Serial.println("Setup complete");
 
-  // play startup melody
+  // Play startup melody
   const int melody[] = {
     880, 1040, 1320, 1560
   };
@@ -106,24 +111,45 @@ void setup() {
 
 void loop() {
 
-  if (!launch && !digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
-    launch = true;
-    Serial.println("[*] Launch!");
-  }
+  // Get barometer data
+  float pressure = bmp.readPressure();
+  float altitude = bmp.readAltitude(SEA_LEVEL_HPA);
+  float temperature = bmp.readTemperature();
 
-  // get IMU data
+  // Get accelerometer and gyroscope data
   sensors_event_t accel, gyro, t;
   mpu.getEvent(&accel, &gyro, &t);
 
-  // get barometer data
-  float pressure = bmp.readPressure();
-  float altitude = bmp.readAltitude(SEA_LEVEL_HPA);
-  float temp = bmp.readTemperature();
+  float aX = accel.acceleration.x;
+  float aY = accel.acceleration.y; // aY = vertical acceleration
+  float aZ = accel.acceleration.z;
+  float gX = gyro.gyro.x;
+  float gY = gyro.gyro.y;
+  float gZ = gyro.gyro.z;
 
-  if (launch && !apogee) {
-    if (altitude > highestAltitude) {
+  aYBuffer.push(aY); // Update the circular buffer with the new aY reading
+  
+  // Launch detection
+  if (!launch) { // This runs while the rocket is idle on the pad, until launch
+
+    // Calculate the average of the vertical acceleration buffer
+    float sum = 0.0;
+    for (int i = 0; i < ACCEL_BUFFER_SIZE; i++) {
+      sum += aYBuffer[i];
+    }
+    float avgAY = sum / ACCEL_BUFFER_SIZE;
+
+    if(avgAY >= LAUNCH_DETECT_THRESHOLD) {  // Compare average vertical acceleration to LAUNCH_DETECT_THRESHOLD
+      launch = true;
+      Serial.println("[*] Launch!");
+    }
+  }
+
+  // Apogee detection
+  if (launch && !apogee) { // This runs while the rocket has been launched, until apogee is reached
+    if (altitude > highestAltitude) { // Keep track of highest recorded altitude
       highestAltitude = altitude;
-    }else if (highestAltitude - altitude > APOGEE_ALTITUDE_DIFF) {
+    }else if (highestAltitude - altitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
       servo.write(SERVO_DEPLOY);
       Serial.println("[*] Apogee!");
