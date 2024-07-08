@@ -68,26 +68,40 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   servo.attach(SERVO_PIN);
 
-  if (!initAll()) {
+  // alarm if initialization fails
+  if (!initAll()) { 
     while (1) {
-      tone(BUZZER_PIN, 800, 80);
-      delay(100);
+      tone(BUZZER_PIN, 2000, 120);
+      delay(150);
     }
   }
 
+  // set MPU6050 range
   mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
   mpu.setGyroRange(MPU6050_RANGE_250_DEG);
   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 
+  // set BMP280 sampling mode
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_1);   /* Standby time. */
   
-  
+  // set servo orientation
   servo.write(SERVO_HOME);
+  delay(500);
+
   Serial.println("Setup complete");
+
+  // play startup melody
+  const int melody[] = {
+    880, 1040, 1320, 1560
+  };
+
+  for (int i=0; i<4; i++) {
+    tone(BUZZER_PIN, melody[i], 120);
+  }
 }
 
 void loop() {
