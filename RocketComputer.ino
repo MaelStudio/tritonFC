@@ -23,7 +23,7 @@ Adafruit_BMP280 bmp;
 Servo servo;
 
 float highestAltitude = 0;
-bool liftoff = false;
+bool launch = false;
 bool apogee = false;
 
 bool initAll() {
@@ -106,9 +106,9 @@ void setup() {
 
 void loop() {
 
-  if (!liftoff && !digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
-    liftoff = true;
-    Serial.println("[*] Liftoff!");
+  if (!launch && !digitalRead(D0)) { // with the actual launch detect cable: 0 = on launch pad / 1 = in the air
+    launch = true;
+    Serial.println("[*] Launch!");
   }
 
   // get IMU data
@@ -120,7 +120,7 @@ void loop() {
   float altitude = bmp.readAltitude(SEA_LEVEL_HPA);
   float temp = bmp.readTemperature();
 
-  if (liftoff && !apogee) {
+  if (launch && !apogee) {
     if (altitude > highestAltitude) {
       highestAltitude = altitude;
     }else if (highestAltitude - altitude > APOGEE_ALTITUDE_DIFF) {
