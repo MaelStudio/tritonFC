@@ -9,8 +9,8 @@
 #include <CircularBuffer.h>
 
 // Pins
-#define SERVO_PIN D1
-#define BUZZER_PIN D2
+#define SERVO_PIN D0
+#define BUZZER_PIN D1
 
 // Constants
 #define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection. the average of the last N values will be compared with LAUNCH_DETECT_THRESHOLD
