@@ -13,7 +13,7 @@
 #define BUZZER_PIN D1
 
 // Constants
-#define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection. the average of the last N values will be compared with LAUNCH_DETECT_THRESHOLD
+#define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection
 #define LAUNCH_DETECT_THRESHOLD 11.0 // In m/s^2 the vertical acceleration required to trigger launch detection
 #define APOGEE_DETECT_THRESHOLD 1.0 // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
 #define SEA_LEVEL_HPA 1005.00
@@ -108,7 +108,7 @@ void setup() {
   }
 
   Serial.println("Setup complete");
-  delay(1000);
+  delay(2000);
 }
 
 void loop() {
@@ -160,7 +160,7 @@ void loop() {
   if (launch && !apogee) { // This runs while the rocket has been launched, until apogee is reached
     if (altitude > highestAltitude) { // Keep track of highest recorded altitude
       highestAltitude = altitude;
-    }else if (highestAltitude - altitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
+    } else if (highestAltitude - altitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
       servo.write(SERVO_DEPLOY);
       Serial.println("[*] Apogee!");
