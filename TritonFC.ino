@@ -20,17 +20,17 @@
 #define SERVO_HOME 0
 #define SERVO_DEPLOY 180
 
-// Variables
+// Sensors and servo
 Adafruit_MPU6050 mpu;
 Adafruit_BMP280 bmp;
 Servo servo;
 
+// Variables
 float highestAltitude = 0;
 bool launch = false;
 bool apogee = false;
-
-// Define circular buffer for vertical acceleration readings
-CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer;
+unsigned long lastIdleBeep = 0;
+CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer; // Define circular buffer for vertical acceleration readings
 
 bool initAll() {
 
@@ -97,7 +97,6 @@ void setup() {
   servo.write(SERVO_HOME);
   delay(500);
 
-  Serial.println("Setup complete");
 
   // Play startup melody
   const int melody[] = {
@@ -107,9 +106,15 @@ void setup() {
   for (int i=0; i<4; i++) {
     tone(BUZZER_PIN, melody[i], 120);
   }
+
+  Serial.println("Setup complete");
+  delay(1000);
 }
 
 void loop() {
+
+  // Get time
+  unsigned long now = millis();
 
   // Get barometer data
   float pressure = bmp.readPressure();
@@ -132,6 +137,12 @@ void loop() {
   // Launch detection
   if (!launch) { // This runs while the rocket is idle on the pad, until launch
 
+    // Beep every second while idle
+    if(now - lastIdleBeep >= 1000) {
+      tone(BUZZER_PIN, 2000, 60);
+      lastIdleBeep = now;
+    }
+    
     // Calculate the average of the vertical acceleration buffer
     float sum = 0.0;
     for (int i = 0; i < ACCEL_BUFFER_SIZE; i++) {
