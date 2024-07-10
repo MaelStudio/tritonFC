@@ -14,6 +14,7 @@
 
 // Constants
 #define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection
+#define ALTITUDE_BUFFER_SIZE 50 // Size of the buffer used to calculate the average altitude for apogee detection
 #define LAUNCH_DETECT_THRESHOLD 11.0 // In m/s^2 the vertical acceleration required to trigger launch detection
 #define APOGEE_DETECT_THRESHOLD 1.0 // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
 #define SEA_LEVEL_HPA 1005.00
@@ -31,9 +32,9 @@ bool launch = false;
 bool apogee = false;
 unsigned long lastIdleBeep = 0;
 CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer; // Define circular buffer for vertical acceleration readings
+CircularBuffer<float, ALTITUDE_BUFFER_SIZE> altitudeBuffer; // Define circular buffer for altitude readings
 
 bool initAll() {
-
   if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
   else {
     Serial.println("[!] SD card initialization failed");
@@ -115,7 +116,6 @@ void setup() {
 }
 
 void loop() {
-
   // Get time
   unsigned long now = millis();
 
@@ -136,16 +136,16 @@ void loop() {
   float gZ = gyro.gyro.z;
 
   aYBuffer.push(aY); // Update the circular buffer with the new aY reading
+  altitudeBuffer.push(altitude); // Update the circular buffer with the new altitude reading
   
   // Launch detection
   if (!launch) { // This runs while the rocket is idle on the pad, until launch
-
     // Beep every second while idle
-    if(now - lastIdleBeep >= 1000) {
+    if (now - lastIdleBeep >= 1000) {
       tone(BUZZER_PIN, 2000, 60);
       lastIdleBeep = now;
     }
-    
+
     // Calculate the average of the vertical acceleration buffer
     float sum = 0.0;
     for (int i = 0; i < ACCEL_BUFFER_SIZE; i++) {
@@ -153,7 +153,7 @@ void loop() {
     }
     float avgAY = sum / ACCEL_BUFFER_SIZE;
 
-    if(avgAY >= LAUNCH_DETECT_THRESHOLD) {  // Compare average vertical acceleration to LAUNCH_DETECT_THRESHOLD
+    if (avgAY >= LAUNCH_DETECT_THRESHOLD) {  // Compare average vertical acceleration to LAUNCH_DETECT_THRESHOLD
       launch = true;
       Serial.println("[*] Launch!");
     }
@@ -161,14 +161,20 @@ void loop() {
 
   // Apogee detection
   if (launch && !apogee) { // This runs while the rocket has been launched, until apogee is reached
-    if (altitude > highestAltitude) { // Keep track of highest recorded altitude
-      highestAltitude = altitude;
-    } else if (highestAltitude - altitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
+    // Calculate the average of the altitude buffer
+    float sum = 0.0;
+    for (int i = 0; i < ALTITUDE_BUFFER_SIZE; i++) {
+      sum += altitudeBuffer[i];
+    }
+    float avgAltitude = sum / ALTITUDE_BUFFER_SIZE;
+
+    if (avgAltitude > highestAltitude) { // Keep track of highest recorded altitude
+      highestAltitude = avgAltitude;
+    } else if (highestAltitude - avgAltitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
       servo.attach(SERVO_PIN);
       servo.write(SERVO_DEPLOY);
       Serial.println("[*] Apogee!");
     }
   }
-
 }
