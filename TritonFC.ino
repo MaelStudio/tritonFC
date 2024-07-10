@@ -70,8 +70,9 @@ bool initAll() {
 void setup() {
   Serial.begin(115200);
 
+  Serial.println("\n====== Welcome to Triton FC! ======");
+
   pinMode(BUZZER_PIN, OUTPUT);
-  servo.attach(SERVO_PIN);
 
   // Alarm if initialization fails
   if (!initAll()) { 
@@ -93,10 +94,11 @@ void setup() {
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_1);   /* Standby time. */
   
-  // Set servo orientation
+  // Set servo to home orientation
+  servo.attach(SERVO_PIN);
   servo.write(SERVO_HOME);
-  delay(500);
-
+  delay(800);
+  servo.detach(); // free up timer to prevent conflicts with tone()
 
   // Play startup melody
   const int melody[] = {
@@ -105,6 +107,7 @@ void setup() {
 
   for (int i=0; i<4; i++) {
     tone(BUZZER_PIN, melody[i], 120);
+    delay(120);
   }
 
   Serial.println("Setup complete");
@@ -162,6 +165,7 @@ void loop() {
       highestAltitude = altitude;
     } else if (highestAltitude - altitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
+      servo.attach(SERVO_PIN);
       servo.write(SERVO_DEPLOY);
       Serial.println("[*] Apogee!");
     }
