@@ -12,6 +12,7 @@ static char dirName[FILE_NAME_LEN] = "/recordings";
 
 // status & control fields
 bool forceRecord = false; // Recording enabled by rec button
+int maxFrames = 20000; // maximum number of frames in video before auto close
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
 uint8_t fsizePtr; // index to frameData[]
