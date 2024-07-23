@@ -1,6 +1,7 @@
 #include "globals.h"
 #include <esp_camera.h>
 #include <SD_MMC.h>
+#include <FS.h>
 
 // SD card storage
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
@@ -11,7 +12,6 @@ static char dirName[FILE_NAME_LEN] = "/recordings";
 
 // status & control fields
 bool forceRecord = false; // Recording enabled by rec button
-int maxFrames = 20000; // maximum number of frames in video before auto close 
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
 uint8_t fsizePtr; // index to frameData[]
@@ -195,11 +195,6 @@ static boolean processFrame() {
       dTimeTot += millis() - dTime;
       saveFrame(fb);
       showProgress();
-      if (frameCnt >= maxFrames) {
-        Serial.println("");
-        Serial.printf("Auto closed recording after %u frames\n", maxFrames);
-        forceRecord = false;
-      }
     }
     if (!isCapturing && wasCapturing) {
       // movement stopped
