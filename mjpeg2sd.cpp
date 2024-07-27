@@ -235,12 +235,6 @@ uint8_t setFPS(uint8_t val) {
   return FPS;
 }
 
-uint8_t setFPSlookup(uint8_t val) {
-  // set FPS from framesize lookup
-  fsizePtr = val;
-  return setFPS(frameData[fsizePtr].defaultFPS);
-}
-
 /******************* Startup ********************/
 
 bool startStorage() {
