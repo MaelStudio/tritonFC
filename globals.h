@@ -47,13 +47,13 @@ void stopVideo();
 void showProgress(const char* marker = ".");
 char* fmtSize (uint64_t sizeVal);
 bool startCam();
-void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt, bool isTL = false);
-void buildAviIdx(size_t dataSize, bool isVid = true, bool isTL = false);
-void finalizeAviIndex(uint16_t frameCnt, bool isTL = false);
-void prepAviIndex(bool isTL = false);
+void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt);
+void buildAviIdx(size_t dataSize, bool isVid = true);
+void finalizeAviIndex(uint16_t frameCnt);
+void prepAviIndex();
 bool prepRecording();
 uint8_t setFPS(uint8_t val);
-size_t writeAviIndex(byte* clientBuf, size_t buffSize, bool isTL = false);
+size_t writeAviIndex(byte* clientBuf, size_t buffSize);
 
 /******************** Structures *******************/
 
