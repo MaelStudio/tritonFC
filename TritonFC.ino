@@ -13,6 +13,11 @@
 #define SERVO_PIN D0
 #define BUZZER_PIN D1
 
+// SD pins
+#define SD_MMC_CLK 7
+#define SD_MMC_CMD 9
+#define SD_MMC_D0 8
+
 // Constants
 #define LOG_DIR_NAME "/flight_%u" // %u will be replaced by the flight number
 #define LOG_FILE_NAME "/flight_%u_logs.csv"
@@ -298,6 +303,11 @@ void loop() {
   // Calculate memory usage in percentages
   // float heapUsage = (float)(ESP.getHeapSize() - ESP.getFreeHeap()) / ESP.getHeapSize() * 100;
   // float psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
+}
+
+bool startStorage() {
+  SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
+  return SD_MMC.begin("/sdcard", true, true);
 }
 
 bool initAll() {

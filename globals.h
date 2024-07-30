@@ -2,11 +2,6 @@
 
 /******************** Pins *******************/
 
-// SD Card
-#define SD_MMC_CLK 7
-#define SD_MMC_CMD 9
-#define SD_MMC_D0 8
-
 // Camera
 #define CAM_BOARD "CAMERA_MODEL_XIAO_ESP32S3"
 #define PWDN_GPIO_NUM     -1
@@ -49,9 +44,9 @@ extern const uint8_t dcBuf[]; // 00dc
 
 void startVideo(char* fileName);
 void stopVideo();
+
 void showProgress(const char* marker = ".");
 char* fmtSize (uint64_t sizeVal);
-bool startStorage();
 bool startCam();
 void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt, bool isTL = false);
 void buildAviIdx(size_t dataSize, bool isVid = true, bool isTL = false);
