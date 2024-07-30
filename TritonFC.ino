@@ -32,6 +32,8 @@
 #define ALPHA 0.98 // Complementary filter coefficient. 1
 #define SENSORS_CALIBRATION_SAMPLES 500
 #define BEEP_FREQ 2000
+#define FILE_NAME_LEN 64
+#define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
 
 // Environment constants
 #define SEA_LEVEL_HPA 1005.00
