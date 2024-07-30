@@ -9,7 +9,6 @@ static size_t highPoint;
 static File aviFile;
 
 // status & control fields
-int maxFrames = 20000; // maximum number of frames in video before auto close
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
 uint8_t fsizePtr; // index to frameData[]
