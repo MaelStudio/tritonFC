@@ -59,7 +59,6 @@ void finalizeAviIndex(uint16_t frameCnt, bool isTL = false);
 void prepAviIndex(bool isTL = false);
 bool prepRecording();
 uint8_t setFPS(uint8_t val);
-uint8_t setFPSlookup(uint8_t val);
 size_t writeAviIndex(byte* clientBuf, size_t buffSize, bool isTL = false);
 
 /******************** Structures *******************/
