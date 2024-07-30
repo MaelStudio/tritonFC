@@ -7,11 +7,8 @@
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
 static size_t highPoint;
 static File aviFile;
-static char aviFileName[FILE_NAME_LEN];
-static char dirName[FILE_NAME_LEN] = "/recordings";
 
 // status & control fields
-bool forceRecord = false; // Recording enabled by rec button
 int maxFrames = 20000; // maximum number of frames in video before auto close
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
@@ -31,7 +28,7 @@ static uint32_t cTime; // file closing time
 
 // task control
 TaskHandle_t captureHandle = NULL;
-bool isCapturing = false;
+bool isRecording = false;
 
 /**************** timers & ISRs ************************/
 
@@ -64,12 +61,10 @@ void controlFrameTimer(bool restartTimer) {
 
 /**************** capture AVI  ************************/
 
-static void openAvi() {
+static void openAvi(char* fileName) {
   // time to open a new file on SD increases with the number of files already present
   oTime = millis();
-  SD_MMC.mkdir(dirName);
-  // open avi file with temporary name 
-  aviFile = SD_MMC.open(AVITEMP, FILE_WRITE);
+  aviFile = SD_MMC.open(fileName, FILE_WRITE);
   oTime = millis() - oTime;
   // initialisation of counters
   startTime = millis();
@@ -140,16 +135,11 @@ static bool closeAvi() {
   aviFile.seek(0, SeekSet); // start of file
   aviFile.write(aviHeader, AVI_HEADER_LEN); 
   aviFile.close();
-  // name file
-  int alen = snprintf(aviFileName, FILE_NAME_LEN - 1, "%s/%s_%u.%s", dirName, frameData[fsizePtr].frameSizeStr, frameCnt, AVI_EXT);
-  if (alen > FILE_NAME_LEN - 1) Serial.println("File name truncated");
-  SD_MMC.rename(AVITEMP, aviFileName);
   cTime = millis() - cTime;
   
   // AVI stats
   Serial.println("");
   Serial.println("******** AVI recording stats ********");
-  Serial.printf("Recorded %s\n", aviFileName);
   Serial.printf("AVI duration: %u secs\n", vidDurationSecs);
   Serial.printf("Number of frames: %u\n", frameCnt);
   Serial.printf("Required FPS: %u\n", FPS);
@@ -168,48 +158,33 @@ static bool closeAvi() {
   return true;
 }
 
+void startVideo(char* fileName) {
+  openAvi(fileName);
+  isRecording = true;
+}
+
+void stopVideo() {
+  isRecording = false;
+  closeAvi();
+}
+
 static boolean processFrame() {
 
   // get camera frame
-  static bool wasCapturing = false;
-  static bool wasRecording = false;
   bool res = true;
   uint32_t dTime = millis();
-  bool finishRecording = false;
 
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL || !fb->len || fb->len > MAX_JPEG) return false;
   
-  // force start button will start capture,
-  isCapturing = forceRecord;
-  if (forceRecord || wasRecording) {
-    if (forceRecord && !wasRecording) wasRecording = true;
-    else if (!forceRecord && wasRecording) wasRecording = false;
-    
-    if (isCapturing && !wasCapturing) {
-      Serial.println("Capture started");
-      openAvi();
-      wasCapturing = true;
-    }
-    if (isCapturing && wasCapturing) {
-      // capture is ongoing
-      dTimeTot += millis() - dTime;
-      saveFrame(fb);
-      showProgress();
-    }
-    if (!isCapturing && wasCapturing) {
-      // movement stopped
-      finishRecording = true;
-    }
-    wasCapturing = isCapturing;
+  if (isRecording) {
+    // capture is ongoing
+    dTimeTot += millis() - dTime;
+    saveFrame(fb);
+    showProgress();
   }
 
   esp_camera_fb_return(fb);
-  if (finishRecording) {
-    // cleanly finish recording (normal or forced)
-    closeAvi();
-    finishRecording = isCapturing = wasCapturing = false;
-  }
   return res;
 }
 
@@ -313,9 +288,9 @@ void showProgress(const char* marker) {
   // show progess as dots 
   static uint8_t dotCnt = 0;
   Serial.print(marker); // progress marker
-  if (++dotCnt >= 30) {
+  if (++dotCnt >= FPS*5) {
     dotCnt = 0;
-    Serial.println("");
+    Serial.println(""); // new line every 5 seconds
   }
 }
 

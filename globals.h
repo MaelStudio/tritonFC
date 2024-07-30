@@ -29,13 +29,9 @@
 
 /******************** Constants *******************/
 
-#define AVI_EXT "avi"
-#define CSV_EXT "csv"
-#define WAVTEMP "/current.wav"
-#define AVITEMP "/current.avi"
-
 #define RAMSIZE (1024 * 32) // set this to multiple of SD card sector size (512 or 1024 bytes)
 #define FILE_NAME_LEN 64
+#define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
 #define FB_BUFFERS 12 // 1 being processed, rest being filled
 #define ONEMEG (1024 * 1024)
 #define MAX_JPEG (ONEMEG / 2) // UXGA jpeg frame buffer at highest quality 375kB rounded up
@@ -45,13 +41,14 @@
 
 /******************** Variables *******************/
 
-extern bool forceRecord; // true to start recording / false to end ongoing recording
 extern int maxFrames;
 extern uint8_t aviHeader[];
 extern const uint8_t dcBuf[]; // 00dc
 
 /******************** Function declarations *******************/
 
+void startVideo(char* fileName);
+void stopVideo();
 void showProgress(const char* marker = ".");
 char* fmtSize (uint64_t sizeVal);
 bool startStorage();
