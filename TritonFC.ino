@@ -5,7 +5,7 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_BMP280.h>
 #include <ESP32Servo.h>
-#include <CircularBuffer.h>
+#include <CircularBuffer.hpp>
 
 #include "globals.h"
 
@@ -153,7 +153,7 @@ void setup() {
 
     // Beep every second while idle
     if (now - lastIdleBeep >= 1) {
-      tone(BUZZER_PIN, 2000, 60);
+      tone(BUZZER_PIN, BEEP_FREQ, 60);
       lastIdleBeep = now;
     }
 
@@ -267,10 +267,14 @@ void loop() {
       } else if (now - stableStartTime >= LANDING_DETECT_DURATION) {
         landed = true;
         Serial.println("[*] Landing!");
+        
         stopVideo(); // close and save video file
         saveFlightData(); // save files in flight folder
+        
+        servo.detach(); // Free up timer to prevent conflicts with tone()
         while (1) {
           beepAltitude(highestAltitude); // beep out flight altitude
+          delay(2000);
         }
       }
     } else {
@@ -419,6 +423,28 @@ void saveFlightData() {
   // float psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
 }
 
+void beepDigit(int n) {
+  if (n == 0) n = 10; // Beep 10 times for a 0
+
+  for (int i=0; i<n; i++) {
+    tone(BUZZER_PIN, BEEP_FREQ);
+    delay(80);
+    noTone(BUZZER_PIN);
+    delay(120);
+  }
+}
+
 void beepAltitude(float alt) {
-  
+
+  // Round altitude and convert to a string
+  int rounded = round(alt);
+  String altStr = String(rounded);
+
+  // Iterate through each digit characters in the string
+  for (int i = 0; i < altStr.length(); i++) {
+    char c = altStr[i];
+    int digit = c - '0'; // Convert digit character to integer
+    beepDigit(digit);
+    if (i < altStr.length() - 1) delay(600);
+  }
 }
