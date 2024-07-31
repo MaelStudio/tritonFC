@@ -22,16 +22,24 @@
 #define LOG_DIR_NAME "/flight_%u" // %u will be replaced by the flight number
 #define LOG_FILE_NAME "/flight_%u_logs.csv"
 #define AVI_FILE_NAME "/flight_%u.avi"
+
+#define SENSORS_CALIBRATION_SAMPLES 500
 #define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection
 #define ALTITUDE_BUFFER_SIZE 50 // Size of the buffer used to calculate the average altitude for apogee detection
-#define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude (baroVel2)
+#define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude
+
 #define LAUNCH_DETECT_THRESHOLD 1.5 // In G's, the vertical acceleration required to trigger launch detection
 #define APOGEE_DETECT_THRESHOLD 1.0 // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
+#define LANDING_DETECT_TRESHOLD 0.5 // In meters, maximum velocity allowed to consider the rocket to be stable
+#define LANDING_DETECT_DURATION 5.0 // In seconds, duration over which the velocity must stay below LANDING_DETECT_TRESHOLD to trigger landing detection
+#define LANDING_APOGEE_DELAY 5.0 // In seconds, minimum delay between apogee and landing detection
+
 #define SERVO_HOME 0
 #define SERVO_DEPLOY 180
+
 #define ALPHA 0.98 // Complementary filter coefficient. 1
-#define SENSORS_CALIBRATION_SAMPLES 500
 #define BEEP_FREQ 2000
+
 #define FILE_NAME_LEN 64
 #define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
 
@@ -51,8 +59,17 @@ char logFilePath[PATH_NAME_LEN];
 char aviFilePath[PATH_NAME_LEN];
 
 // Variables
-float launchTime = 0;
+
+// State
+bool launch = false;
 bool apogee = false;
+bool landed = false;
+
+float launchTime;
+float apogeeTime;
+float stableStartTime;
+bool stable;
+
 float highestAltitude = 0;
 sensors_event_t accel, gyro, temp;
 CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer; // Define circular buffer for vertical acceleration readings
@@ -127,8 +144,8 @@ void setup() {
   while(SD_MMC.exists(logFilePath)) {
     i++;
     snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
-  snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, LOG_FILE_NAME); // Add dir
-  snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
+    snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, LOG_FILE_NAME); // Add dir
+    snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
   }
 
   // Create log dir
@@ -141,7 +158,6 @@ void setup() {
   Serial.println("Setup complete");
 
   // Detect launch
-  bool launch = false;
   while(!launch) { // While the rocket is idle on the pad, until launch is detected
     // Get time
     float now = micros() / 1000000.0;
@@ -172,18 +188,17 @@ void setup() {
     }
   }
 
-  launchTime = micros() / 1000000.0;
-
+  launchTime = micros() / 1000000.0; // Save launch time
   tone(BUZZER_PIN, BEEP_FREQ, 1000); // Beep for 1 second at launch
+  
   Serial.println("[*] Launch!");
 
   // Create CSV log file
   logFile = SD_MMC.open(logFilePath, FILE_WRITE);
-  logFile.println("t,altitude,accel,baroVel,baroVel2,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee"); // Write header line
+  logFile.println("t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee"); // Write header line
   logFile.close();
 
-  // Create avi file and start video recording
-  startVideo(aviFilePath);
+  startVideo(aviFilePath); // Create avi file and start video recording
 }
 
 void loop() {
@@ -229,15 +244,8 @@ void loop() {
   yaw = ALPHA * yaw + (1.0 - ALPHA) * accelYaw;
   pitch = ALPHA * pitch + (1.0 - ALPHA) * accelPitch;
   
-  // Integrate vertical accel to get an estimation of velocity
-  accelVel += (aY - GRAVITY) * dt;
-
-  // Calculate vertical velocity from barometer
-  static float lastAltitude = altitude;
-  float baroVel = (altitude - lastAltitude) / dt; // Vertical velocity in m/s
-  float baroVel2 = (altitude - altitudeBuffer[altitudeBuffer.size() - timeBuffer.size()]) / (now - timeBuffer[0]); // Vertical velocity in m/s, averaged from previous buffered altitude readings
-  
-  lastAltitude = altitude;
+  accelVel += (aY - GRAVITY) * dt; // Integrate vertical accel to get an estimation of velocity
+  float baroVel = (altitude - altitudeBuffer[altitudeBuffer.size() - timeBuffer.size()]) / (now - timeBuffer[0]); // Vertical velocity in m/s, calculated from previous buffered altitude readings
 
   /******************** Apogee detection *******************/
 
@@ -253,16 +261,33 @@ void loop() {
       highestAltitude = avgAltitude;
     } else if (highestAltitude - avgAltitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
+      apogeeTime = now;
       servo.attach(SERVO_PIN);
       servo.write(SERVO_DEPLOY);
       Serial.println("[*] Apogee!");
-      stopVideo();
+    }
+  }
+
+  /******************** Landing detection *******************/
+
+  if (!landed && apogee && (now - apogeeTime) >= LANDING_APOGEE_DELAY) {
+    if (abs(baroVel) <= LANDING_DETECT_TRESHOLD) {
+      if (!stable) {
+        stable = true;
+        stableStartTime = now;
+      } else if (now - stableStartTime >= LANDING_DETECT_DURATION) {
+        landed = true;
+        Serial.println("[*] Landing!");
+        stopVideo();
+      }
+    } else {
+      stable = false;
     }
   }
 
   /******************** Data logging to SD *******************/
   
-  // t,altitude,accel,baroVel,baroVel2,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee
+  // t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee
   logFile = SD_MMC.open(logFilePath, FILE_APPEND);
   logFile.printf("%.3f", now);
   logFile.print(",");
@@ -271,8 +296,6 @@ void loop() {
   logFile.print(acceleration);
   logFile.print(",");
   logFile.print(baroVel);
-  logFile.print(",");
-  logFile.print(baroVel2);
   logFile.print(",");
   logFile.print(accelVel);
   logFile.print(",");
