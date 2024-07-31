@@ -168,23 +168,20 @@ void stopVideo() {
 }
 
 static boolean processFrame() {
-
-  // get camera frame
-  bool res = true;
-  uint32_t dTime = millis();
-
-  camera_fb_t* fb = esp_camera_fb_get();
-  if (fb == NULL || !fb->len || fb->len > MAX_JPEG) return false;
   
   if (isRecording) {
-    // capture is ongoing
+    uint32_t dTime = millis();
+    camera_fb_t* fb = esp_camera_fb_get(); // get camera frame
+    if (fb == NULL || !fb->len || fb->len > MAX_JPEG) return false;
     dTimeTot += millis() - dTime;
+
     saveFrame(fb);
+    esp_camera_fb_return(fb);
+
     showProgress();
   }
 
-  esp_camera_fb_return(fb);
-  return res;
+  return true;
 }
 
 static void captureTask(void* parameter) {
@@ -268,15 +265,6 @@ bool prepRecording() {
 }
 
 /****** misc ******/
-
-static void deleteTask(TaskHandle_t thisTaskHandle) {
-  if (thisTaskHandle != NULL) vTaskDelete(thisTaskHandle);
-  thisTaskHandle = NULL;
-}
-
-void endTasks() {
-  deleteTask(captureHandle);
-}
 
 void showProgress(const char* marker) {
   // show progess as dots 
