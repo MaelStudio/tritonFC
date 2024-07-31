@@ -1,5 +1,3 @@
-#include "globals.h"
-
 // Libraries
 #include <SD_MMC.h>
 #include <FS.h>
@@ -8,6 +6,8 @@
 #include <Adafruit_BMP280.h>
 #include <ESP32Servo.h>
 #include <CircularBuffer.h>
+
+#include "globals.h"
 
 // Pins
 #define SERVO_PIN D0
@@ -18,28 +18,35 @@
 #define SD_MMC_CMD 9
 #define SD_MMC_D0 8
 
-// Constants
+// SD files
 #define LOG_DIR_NAME "/flight_%u" // %u will be replaced by the flight number
 #define LOG_FILE_NAME "/flight_%u_logs.csv"
 #define AVI_FILE_NAME "/flight_%u.avi"
+#define LOG_FILE_TEMP "/current.csv"
+#define AVI_FILE_TEMP "/current.avi"
 
+// Sensor buffers
 #define SENSORS_CALIBRATION_SAMPLES 500
 #define ACCEL_BUFFER_SIZE 50 // Size of the buffer used to calculate the average acceleration for launch detection
 #define ALTITUDE_BUFFER_SIZE 50 // Size of the buffer used to calculate the average altitude for apogee detection
 #define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude
 
+// Launch/apogee/landing detect parameters
 #define LAUNCH_DETECT_THRESHOLD 1.5 // In G's, the vertical acceleration required to trigger launch detection
 #define APOGEE_DETECT_THRESHOLD 1.0 // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
 #define LANDING_DETECT_TRESHOLD 0.5 // In meters, maximum velocity allowed to consider the rocket to be stable
 #define LANDING_DETECT_DURATION 5.0 // In seconds, duration over which the velocity must stay below LANDING_DETECT_TRESHOLD to trigger landing detection
 #define LANDING_APOGEE_DELAY 5.0 // In seconds, minimum delay between apogee and landing detection
 
+// Servo positions
 #define SERVO_HOME 0
 #define SERVO_DEPLOY 180
 
+// Misc constants
 #define ALPHA 0.98 // Complementary filter coefficient. 1
-#define BEEP_FREQ 2000
+#define BEEP_FREQ 2000 // Buzzer beep frequency, 2000 Hz is loudest
 
+// File name length
 #define FILE_NAME_LEN 64
 #define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
 
@@ -136,25 +143,6 @@ void setup() {
 
   servo.detach(); // Free up timer to prevent conflicts with tone()
 
-  // Find flight number
-  int i = 1;
-  snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
-  snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, LOG_FILE_NAME); // Add dir
-  snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
-  while(SD_MMC.exists(logFilePath)) {
-    i++;
-    snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
-    snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, LOG_FILE_NAME); // Add dir
-    snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
-  }
-
-  // Create log dir
-  SD_MMC.mkdir(logDir);
-
-  // Add dir to avi file name
-  snprintf(aviFilePath, sizeof(aviFilePath), "%s%s", logDir, AVI_FILE_NAME); // Add dir
-  snprintf(aviFilePath, sizeof(aviFilePath), aviFilePath, i); // Replace %u by i
-
   Serial.println("Setup complete");
 
   // Detect launch
@@ -194,14 +182,15 @@ void setup() {
   Serial.println("[*] Launch!");
 
   // Create CSV log file
-  logFile = SD_MMC.open(logFilePath, FILE_WRITE);
+  logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_WRITE);
   logFile.println("t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee"); // Write header line
   logFile.close();
 
-  startVideo(aviFilePath); // Create avi file and start video recording
+  startVideo(AVI_FILE_TEMP); // Create avi file and start video recording
 }
 
 void loop() {
+
   /******************** Data collection *******************/
 
   // Get time in seconds
@@ -278,7 +267,11 @@ void loop() {
       } else if (now - stableStartTime >= LANDING_DETECT_DURATION) {
         landed = true;
         Serial.println("[*] Landing!");
-        stopVideo();
+        stopVideo(); // close and save video file
+        saveFlightData(); // save files in flight folder
+        while (1) {
+          beepAltitude(highestAltitude); // beep out flight altitude
+        }
       }
     } else {
       stable = false;
@@ -288,7 +281,7 @@ void loop() {
   /******************** Data logging to SD *******************/
   
   // t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee
-  logFile = SD_MMC.open(logFilePath, FILE_APPEND);
+  logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_APPEND);
   logFile.printf("%.3f", now);
   logFile.print(",");
   logFile.print(altitude);
@@ -324,10 +317,6 @@ void loop() {
   logFile.print(apogee);
   logFile.print("\n");
   logFile.close();
-
-  // Calculate memory usage in percentages
-  // float heapUsage = (float)(ESP.getHeapSize() - ESP.getFreeHeap()) / ESP.getHeapSize() * 100;
-  // float psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
 }
 
 bool startStorage() {
@@ -402,4 +391,34 @@ void calibrateSensors(int samples) {
   altitude_offset /= samples;
 
   Serial.printf("IMU calibrated with offsets: %.6f %.6f %.6f %.6f %.6f %.6f\n", aX_offset, aY_offset, aZ_offset, gX_offset, gY_offset, gZ_offset);
+}
+
+void saveFlightData() {
+  // Find flight number
+  int i = 1;
+  snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
+  while(SD_MMC.exists(logDir)) {
+    i++;
+    snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
+  }
+  // Create log dir
+  SD_MMC.mkdir(logDir);
+
+  // Make file paths
+  snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, LOG_FILE_NAME); // Add dir
+  snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
+  snprintf(aviFilePath, sizeof(aviFilePath), "%s%s", logDir, AVI_FILE_NAME); // Add dir
+  snprintf(aviFilePath, sizeof(aviFilePath), aviFilePath, i); // Replace %u by i
+
+  // Rename files
+  SD_MMC.rename(LOG_FILE_TEMP, logFilePath);
+  SD_MMC.rename(AVI_FILE_TEMP, aviFilePath);
+
+  // Calculate memory usage in percentages
+  // float heapUsage = (float)(ESP.getHeapSize() - ESP.getFreeHeap()) / ESP.getHeapSize() * 100;
+  // float psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
+}
+
+void beepAltitude(float alt) {
+  
 }
