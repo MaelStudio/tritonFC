@@ -1,7 +1,9 @@
-#include "globals.h"
-#include <esp_camera.h>
+// Libraries
 #include <SD_MMC.h>
 #include <FS.h>
+#include <esp_camera.h>
+
+#include "globals.h"
 
 // SD card storage
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
@@ -168,7 +170,7 @@ void stopVideo() {
 }
 
 static boolean processFrame() {
-  
+
   if (isRecording) {
     uint32_t dTime = millis();
     camera_fb_t* fb = esp_camera_fb_get(); // get camera frame
