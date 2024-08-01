@@ -8,11 +8,12 @@
 // SD card storage
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
 static size_t highPoint;
-static File aviFile;
 
 // status & control fields
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
+uint16_t frameWidth = 0;
+uint16_t frameHeight = 0;
 uint8_t fsizePtr; // index to frameData[]
 uint8_t xclkMhz = 20; // camera clock rate MHz
 #define OneMHz 1000000
@@ -114,7 +115,7 @@ static void saveFrame(camera_fb_t* fb) {
   fTimeTot += fTime;
 }
 
-static bool closeAvi() {
+static float closeAvi() {
   // closes the recorded file
   uint32_t vidDuration = millis() - startTime;
   uint32_t vidDurationSecs = lround(vidDuration/1000.0);
@@ -156,7 +157,7 @@ static bool closeAvi() {
   Serial.printf("File open / completion times: %u ms / %u ms\n", oTime, cTime);
   Serial.printf("Busy: %u%%\n", std::min(100 * (wTimeTot + fTimeTot + dTimeTot + oTime + cTime) / vidDuration, (uint32_t)100));
   Serial.println("*************************************");
-  return true;
+  return actualFPS;
 }
 
 void startVideo(char* fileName) {
@@ -164,9 +165,9 @@ void startVideo(char* fileName) {
   isRecording = true;
 }
 
-void stopVideo() {
+float stopVideo() {
   isRecording = false;
-  closeAvi();
+  return closeAvi();
 }
 
 static boolean processFrame() {
@@ -252,6 +253,11 @@ static void startSDtasks() {
   
   sensor_t * s = esp_camera_sensor_get();
   fsizePtr = s->status.framesize;
+
+  // save frame size
+  frameWidth = frameData[fsizePtr].frameWidth;
+  frameHeight = frameData[fsizePtr].frameHeight;
+
   setFPS(frameData[fsizePtr].defaultFPS);
 }
 
@@ -283,8 +289,8 @@ char* fmtSize (uint64_t sizeVal) {
   // only one call per format string
   static char returnStr[20];
   if (sizeVal < 50 * 1024) sprintf(returnStr, "%llu bytes", sizeVal);
-  else if (sizeVal < ONEMEG) sprintf(returnStr, "%lluKB", sizeVal / 1024);
-  else if (sizeVal < ONEMEG * 1024) sprintf(returnStr, "%0.1fMB", (double)(sizeVal) / ONEMEG);
-  else sprintf(returnStr, "%0.1fGB", (double)(sizeVal) / (ONEMEG * 1024));
+  else if (sizeVal < ONEMEG) sprintf(returnStr, "%llu KB", sizeVal / 1024);
+  else if (sizeVal < ONEMEG * 1024) sprintf(returnStr, "%0.1f MB", (double)(sizeVal) / ONEMEG);
+  else sprintf(returnStr, "%0.1f GB", (double)(sizeVal) / (ONEMEG * 1024));
   return returnStr;
 }

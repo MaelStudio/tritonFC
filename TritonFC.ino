@@ -20,6 +20,7 @@
 
 // SD files
 #define LOG_DIR_NAME "/flight_%u" // %u will be replaced by the flight number
+#define STATS_FILE_NAME "/flight_%u.csv"
 #define LOG_FILE_NAME "/flight_%u_logs.csv"
 #define AVI_FILE_NAME "/flight_%u.avi"
 #define LOG_FILE_TEMP "/current.csv"
@@ -60,43 +61,59 @@ Adafruit_BMP280 barometer;
 Servo servo;
 
 // SD
-File logFile;
+static File logFile;
 char logDir[FILE_NAME_LEN];
 char logFilePath[PATH_NAME_LEN];
 char aviFilePath[PATH_NAME_LEN];
+char statsFilePath[PATH_NAME_LEN];
 
 // Variables
+
+// Buffers
+CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer; // Define circular buffer for vertical acceleration readings
+CircularBuffer<float, ALTITUDE_BUFFER_SIZE> altitudeBuffer; // Define circular buffer for altitude readings
+CircularBuffer<float, ALTITUDE_BUFFER_SIZE> timeBuffer;
+
+// Sensor data
+sensors_event_t accel, gyro, temp;
+float yaw = 0;
+float pitch = 0;
+float roll = 0;
+float accelVel = 0;
+bool stable;
 
 // State
 bool launch = false;
 bool apogee = false;
 bool landed = false;
 
+// Time
 float launchTime;
 float apogeeTime;
+float deployTime;
+float flightTime;
 float stableStartTime;
-bool stable;
 
+// Stats
+int logCount = 0;
 float highestAltitude = 0;
-sensors_event_t accel, gyro, temp;
-CircularBuffer<float, ACCEL_BUFFER_SIZE> aYBuffer; // Define circular buffer for vertical acceleration readings
-CircularBuffer<float, ALTITUDE_BUFFER_SIZE> altitudeBuffer; // Define circular buffer for altitude readings
-CircularBuffer<float, ALTITUDE_BUFFER_SIZE> timeBuffer;
-float yaw = 0;
-float pitch = 0;
-float roll = 0;
-float accelVel = 0;
+float maxVel = 0;
+float maxAccel = 0;
+float deployVel;
+float heapUsage;
+float psramUsage;
+float vidFPS;
 
 // imu offsets
-float aX_offset = 0;
-float aY_offset = 0;
-float aZ_offset = 0;
-float gX_offset = 0;
-float gY_offset = 0;
-float gZ_offset = 0;
+float aX_offset;
+float aY_offset;
+float aZ_offset;
+float gX_offset;
+float gY_offset;
+float gZ_offset;
 
 // altitude offset
-float altitude_offset = 0;
+float altitude_offset;
 
 void setup() {
   Serial.begin(115200);
@@ -236,7 +253,12 @@ void loop() {
   accelVel += (aY - GRAVITY) * dt; // Integrate vertical accel to get an estimation of velocity
   float baroVel = (altitude - altitudeBuffer[altitudeBuffer.size() - timeBuffer.size()]) / (now - timeBuffer[0]); // Vertical velocity in m/s, calculated from previous buffered altitude readings
 
-  /******************** Apogee detection *******************/
+  // Update flight stats
+  if (baroVel > maxVel) maxVel = baroVel;
+  if (acceleration > maxAccel) maxAccel = acceleration;
+
+
+  /******************** Apogee detection & Parachute deploy *******************/
 
   if (!apogee) { // This runs until apogee is reached
     // Calculate the average of the altitude buffer
@@ -248,11 +270,13 @@ void loop() {
 
     if (avgAltitude > highestAltitude) { // Keep track of highest recorded altitude
       highestAltitude = avgAltitude;
+      apogeeTime = now;
     } else if (highestAltitude - avgAltitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
-      apogeeTime = now;
+      deployTime = now;
+      deployVel = abs(baroVel);
       servo.attach(SERVO_PIN);
-      servo.write(SERVO_DEPLOY);
+      servo.write(SERVO_DEPLOY); // deploy parachute
       Serial.println("[*] Apogee!");
     }
   }
@@ -266,14 +290,19 @@ void loop() {
         stableStartTime = now;
       } else if (now - stableStartTime >= LANDING_DETECT_DURATION) {
         landed = true;
+        flightTime = now;
         Serial.println("[*] Landing!");
-        
-        stopVideo(); // close and save video file
+
+        // Calculate memory usage in percentages
+        heapUsage = (float)(ESP.getHeapSize() - ESP.getFreeHeap()) / ESP.getHeapSize() * 100;
+        psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
+
+        vidFPS = stopVideo(); // close and save video file
         saveFlightData(); // save files in flight folder
         
         servo.detach(); // Free up timer to prevent conflicts with tone()
         while (1) {
-          beepAltitude(highestAltitude); // beep out flight altitude
+          beepAltitude(highestAltitude); // beep out apogee
           delay(2000);
         }
       }
@@ -284,43 +313,45 @@ void loop() {
 
   /******************** Data logging to SD *******************/
   
-  // t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee
+  // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_APPEND);
   logFile.printf("%.3f", now);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(altitude);
-  logFile.print(",");
-  logFile.print(acceleration);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(baroVel);
-  logFile.print(",");
+  logFile.print(',');
+  logFile.print(acceleration);
+  logFile.print(',');
   logFile.print(accelVel);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(yaw);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(pitch);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(roll);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(aX);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(aY);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(aZ);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(gX);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(gY);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(gZ);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(temperature);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(pressure);
-  logFile.print(",");
+  logFile.print(',');
   logFile.print(apogee);
-  logFile.print("\n");
+  logFile.print('\n');
   logFile.close();
+
+  logCount++; // Keep count of the number of times new data is logged to SD card
 }
 
 bool startStorage() {
@@ -413,14 +444,58 @@ void saveFlightData() {
   snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
   snprintf(aviFilePath, sizeof(aviFilePath), "%s%s", logDir, AVI_FILE_NAME); // Add dir
   snprintf(aviFilePath, sizeof(aviFilePath), aviFilePath, i); // Replace %u by i
+  snprintf(statsFilePath, sizeof(statsFilePath), "%s%s", logDir, STATS_FILE_NAME); // Add dir
+  snprintf(statsFilePath, sizeof(statsFilePath), statsFilePath, i); // Replace %u by i
 
   // Rename files
   SD_MMC.rename(LOG_FILE_TEMP, logFilePath);
   SD_MMC.rename(AVI_FILE_TEMP, aviFilePath);
 
-  // Calculate memory usage in percentages
-  // float heapUsage = (float)(ESP.getHeapSize() - ESP.getFreeHeap()) / ESP.getHeapSize() * 100;
-  // float psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
+  // Calculate files size
+  unsigned long sdUsage = 0;
+  logFile = SD_MMC.open(logFilePath);
+  aviFile = SD_MMC.open(aviFilePath);
+  sdUsage += logFile.size();
+  sdUsage += aviFile.size();
+  logFile.close();
+  aviFile.close();
+
+  int logHz = round(logCount / flightTime); // Calculate log frequency
+
+  // Create stats file
+  File statsFile = SD_MMC.open(statsFilePath, FILE_WRITE);
+  statsFile.println("flightNum,apogee (m),maxVel (m/s),maxAccel (G),apogeeTime (s),deployTime (s),flightTime (s),deployVel (m/s),startupVoltage (V),heapUsage (%),psramUsage (%),sdUsage (Mb),videoRes,videoFPS,logFreq (Hz)"); // Write header line
+  statsFile.print(i);
+  statsFile.print(',');
+  statsFile.print(highestAltitude);
+  statsFile.print(',');
+  statsFile.print(maxVel);
+  statsFile.print(',');
+  statsFile.print(maxAccel);
+  statsFile.print(',');
+  statsFile.print(apogeeTime);
+  statsFile.print(',');
+  statsFile.print(deployTime);
+  statsFile.print(',');
+  statsFile.print(flightTime);
+  statsFile.print(',');
+  statsFile.print(deployVel);
+  statsFile.print(',');
+  statsFile.print("?");
+  statsFile.print(',');
+  statsFile.print(heapUsage);
+  statsFile.print(',');
+  statsFile.print(psramUsage);
+  statsFile.print(',');
+  statsFile.print(fmtSize(sdUsage));
+  statsFile.print(',');
+  statsFile.printf("%ux%u", frameWidth, frameHeight);
+  statsFile.print(',');
+  statsFile.printf("%.1f", vidFPS);
+  statsFile.print(',');
+  statsFile.print(logHz);
+  statsFile.print('\n');
+  statsFile.close();
 }
 
 void beepDigit(int n) {

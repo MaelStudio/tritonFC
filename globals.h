@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <FS.h>
 
 /******************** Pins *******************/
 
@@ -35,14 +36,16 @@
 
 /******************** Variables *******************/
 
-extern int maxFrames;
+static File aviFile;
 extern uint8_t aviHeader[];
 extern const uint8_t dcBuf[]; // 00dc
+extern uint16_t frameWidth;
+extern uint16_t frameHeight;
 
 /******************** Function declarations *******************/
 
 void startVideo(char* fileName);
-void stopVideo();
+float stopVideo();
 
 void showProgress(const char* marker = ".");
 char* fmtSize (uint64_t sizeVal);
