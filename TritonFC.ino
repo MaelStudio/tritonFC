@@ -10,8 +10,10 @@
 #include "globals.h"
 
 // Pins
-#define SERVO_PIN D0
+#define BAT_PIN D0
 #define BUZZER_PIN D1
+#define LED_PIN D2
+#define SERVO_PIN D3
 
 // SD pins
 #define SD_MMC_CLK 7
