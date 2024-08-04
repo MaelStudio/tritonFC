@@ -88,6 +88,7 @@ bool stable;
 bool launch = false;
 bool apogee = false;
 bool landed = false;
+bool parachute = false;
 
 // Time
 float launchTime;
@@ -202,7 +203,7 @@ void setup() {
 
   // Create CSV log file
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_WRITE);
-  logFile.println("t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee"); // Write header line
+  logFile.println("t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,parachute"); // Write header line
   logFile.close();
 
   startVideo(AVI_FILE_TEMP); // Create avi file and start video recording
@@ -262,7 +263,7 @@ void loop() {
 
   /******************** Apogee detection & Parachute deploy *******************/
 
-  if (!apogee) { // This runs until apogee is reached
+  if (!apogee) { // This runs until apogee is detected
     // Calculate the average of the altitude buffer
     float sum = 0.0;
     for (int i = 0; i < ALTITUDE_BUFFER_SIZE; i++) {
@@ -275,10 +276,15 @@ void loop() {
       apogeeTime = now;
     } else if (highestAltitude - avgAltitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
       apogee = true;
-      deployTime = now;
-      deployVel = abs(baroVel);
       servo.attach(SERVO_PIN);
       servo.write(SERVO_DEPLOY); // deploy parachute
+      parachute = true;
+      deployTime = now;
+      deployVel = abs(baroVel);
+
+      led.setPixelColor(0, led.Color(0, 100, 100));
+      led.show();
+
       Serial.println("[*] Apogee!");
     }
   }
@@ -315,7 +321,7 @@ void loop() {
 
   /******************** Data logging to SD *******************/
   
-  // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,apogee
+  // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,parachute
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_APPEND);
   logFile.printf("%.3f", now);
   logFile.print(',');
@@ -349,7 +355,7 @@ void loop() {
   logFile.print(',');
   logFile.print(pressure);
   logFile.print(',');
-  logFile.print(apogee);
+  logFile.print(parachute);
   logFile.print('\n');
   logFile.close();
 
