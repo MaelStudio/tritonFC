@@ -466,7 +466,7 @@ void saveFlightData() {
 
   // Create stats file
   File statsFile = SD_MMC.open(statsFilePath, FILE_WRITE);
-  statsFile.println("flightNum,apogee (m),maxVel (m/s),maxAccel (G),apogeeTime (s),deployTime (s),flightTime (s),deployVel (m/s),startupVoltage (V),heapUsage (%),psramUsage (%),sdUsage (Mb),videoRes,videoFPS,logFreq (Hz)"); // Write header line
+  statsFile.println("flightNum,apogee (m),maxVel (m/s),maxAccel (G),apogeeTime (s),deployTime (s),flightTime (s),deployVel (m/s),startupVoltage (V),heapUsage,psramUsage,sdUsage,videoRes,videoFPS,logFreq (Hz)"); // Write header line
   statsFile.print(i);
   statsFile.print(',');
   statsFile.print(highestAltitude);
@@ -485,9 +485,9 @@ void saveFlightData() {
   statsFile.print(',');
   statsFile.print("?");
   statsFile.print(',');
-  statsFile.print(heapUsage);
+  statsFile.printf("%.1f%", heapUsage);
   statsFile.print(',');
-  statsFile.print(psramUsage);
+  statsFile.printf("%.1f%", psramUsage);
   statsFile.print(',');
   statsFile.print(fmtSize(sdUsage));
   statsFile.print(',');
