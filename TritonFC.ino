@@ -491,9 +491,9 @@ void saveFlightData() {
   statsFile.print(',');
   statsFile.print("?");
   statsFile.print(',');
-  statsFile.printf("%.1f%", heapUsage);
+  statsFile.printf("%.1f%%", heapUsage);
   statsFile.print(',');
-  statsFile.printf("%.1f%", psramUsage);
+  statsFile.printf("%.1f%%", psramUsage);
   statsFile.print(',');
   statsFile.print(fmtSize(sdUsage));
   statsFile.print(',');
