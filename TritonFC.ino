@@ -5,6 +5,7 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_BMP280.h>
 #include <ESP32Servo.h>
+#include <Adafruit_NeoPixel.h>
 #include <CircularBuffer.hpp>
 
 #include "globals.h"
@@ -45,6 +46,20 @@
 #define SERVO_HOME 0
 #define SERVO_DEPLOY 180
 
+// LED colors
+#define LED_BRIGHTNESS 255 // LED Brightness from 0 to 255
+#define COLOR_LOW_BAT 255, 0, 0 // Red
+#define COLOR_SD 255, 255, 200 // White
+#define COLOR_CAMERA 255, 50, 0 // Orange
+#define COLOR_GET_FB 255, 100, 200 // Pink
+#define COLOR_IMU 0, 0, 255 // Blue
+#define COLOR_BAROMETER 255, 0, 255 // Purple
+#define COLOR_OK 0, 255, 0 // Green
+#define COLOR_PAD_IDLE 0, 255, 0 // Green
+#define COLOR_PAD_IDLE_FLASH 0, 0, 255 // Blue
+#define COLOR_LAUNCH 0, 0, 255 // Blue
+#define COLOR_ALTITUDE_FLASH 0, 255, 255 // Cyan
+
 // Misc constants
 #define ALPHA 0.98 // Complementary filter coefficient. 1
 #define BEEP_FREQ 2000 // Buzzer beep frequency, 2000 Hz is loudest
@@ -57,10 +72,12 @@
 #define SEA_LEVEL_HPA 1005.00
 #define GRAVITY 9.80665
 
-// Sensors and servo
+// Sensors and actuators
 Adafruit_MPU6050 imu;
 Adafruit_BMP280 barometer;
 Servo servo;
+Adafruit_NeoPixel led(1, LED_PIN, NEO_GRB + NEO_KHZ800);
+byte lastColor[3];
 
 // SD
 static File logFile;
@@ -123,14 +140,22 @@ void setup() {
   Serial.println("\n====== Welcome to Triton FC! ======");
 
   pinMode(BUZZER_PIN, OUTPUT);
+  led.begin();
+  led.setBrightness(LED_BRIGHTNESS);
 
   // Alarm if initialization fails
-  if (!initAll()) { 
+  if (!initAll()) {
+
     while (1) {
       tone(BUZZER_PIN, BEEP_FREQ, 120);
-      delay(150);
+      ledOn();
+      delay(120);
+      ledOff();
+      delay(50);
     }
   }
+
+  delay(300);
 
   // Play startup melody
   const int melody[] = {
@@ -165,16 +190,21 @@ void setup() {
 
   Serial.println("Setup complete");
 
+  ledColor(COLOR_PAD_IDLE);
+
   // Detect launch
   while(!launch) { // While the rocket is idle on the pad, until launch is detected
     // Get time
     float now = micros() / 1000000.0;
     static float lastIdleBeep = now;
 
-    // Beep every second while idle
+    // Beep and flash every second while idle
     if (now - lastIdleBeep >= 1) {
       tone(BUZZER_PIN, BEEP_FREQ, 60);
+      ledColor(COLOR_PAD_IDLE_FLASH);
       lastIdleBeep = now;
+    } else if (now - lastIdleBeep >= 0.1) {
+      ledColor(COLOR_PAD_IDLE);
     }
 
     // Get accelerometer data
@@ -197,9 +227,10 @@ void setup() {
   }
 
   launchTime = micros() / 1000000.0; // Save launch time
-  tone(BUZZER_PIN, BEEP_FREQ, 1000); // Beep for 1 second at launch
   
   Serial.println("[*] Launch!");
+
+  ledColor(COLOR_LAUNCH);
 
   // Create CSV log file
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_WRITE);
@@ -260,7 +291,6 @@ void loop() {
   if (baroVel > maxVel) maxVel = baroVel;
   if (acceleration > maxAccel) maxAccel = acceleration;
 
-
   /******************** Apogee detection & Parachute deploy *******************/
 
   if (!apogee) { // This runs until apogee is detected
@@ -282,9 +312,6 @@ void loop() {
       deployTime = now;
       deployVel = abs(baroVel);
 
-      led.setPixelColor(0, led.Color(0, 100, 100));
-      led.show();
-
       Serial.println("[*] Apogee!");
     }
   }
@@ -299,6 +326,7 @@ void loop() {
       } else if (now - stableStartTime >= LANDING_DETECT_DURATION) {
         landed = true;
         flightTime = now;
+
         Serial.println("[*] Landing!");
 
         // Calculate memory usage in percentages
@@ -307,7 +335,9 @@ void loop() {
 
         vidFPS = stopVideo(); // close and save video file
         saveFlightData(); // save files in flight folder
-        
+
+        ledOff();
+
         servo.detach(); // Free up timer to prevent conflicts with tone()
         while (1) {
           beepAltitude(highestAltitude); // beep out apogee
@@ -368,37 +398,62 @@ bool startStorage() {
 }
 
 bool initAll() {
+  ledColor(COLOR_SD);
   if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
   else {
     Serial.println("[!] SD card initialization failed");
     return false;
   }
-
+  
+  ledColor(COLOR_CAMERA);
   if (startCam()) Serial.println("Camera initialized");
   else {
     Serial.println("[!] Camera init failed");
     return false;
   }
 
+  ledColor(COLOR_GET_FB);
   if (prepRecording()) Serial.println("Ready to record");
   else {
     Serial.println("[!] Failed to get camera frame");
     return false;
   }
 
+  ledColor(COLOR_IMU);
   if (imu.begin()) Serial.println("MPU6050 initialized");
   else {
     Serial.println("[!] MPU6050 init failed");
     return false;
   }
 
+  ledColor(COLOR_BAROMETER);
   if (barometer.begin(0x76)) Serial.println("BMP280 initialized");
   else {
     Serial.println("[!] BMP280 init failed");
     return false;
   }
 
+  ledColor(COLOR_OK);
   return true;
+}
+
+void ledColor(byte r, byte g, byte b) {
+  led.setPixelColor(0, led.Color(r, g, b));
+  led.show();
+
+  // update last color
+  lastColor[0] = r;
+  lastColor[1] = g;
+  lastColor[2] = b;
+}
+
+void ledOff() {
+  led.setPixelColor(0, led.Color(0, 0, 0));
+  led.show();
+}
+
+void ledOn() {
+  ledColor(lastColor[0], lastColor[1], lastColor[2]); // set led to last color
 }
 
 // IMU and barometer calibration
@@ -510,9 +565,10 @@ void beepDigit(int n) {
   if (n == 0) n = 10; // Beep 10 times for a 0
 
   for (int i=0; i<n; i++) {
-    tone(BUZZER_PIN, BEEP_FREQ);
+    tone(BUZZER_PIN, BEEP_FREQ, 80);
+    ledColor(COLOR_ALTITUDE_FLASH); // Also flash LED
     delay(80);
-    noTone(BUZZER_PIN);
+    ledOff();
     delay(120);
   }
 }
