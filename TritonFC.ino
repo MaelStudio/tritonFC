@@ -50,10 +50,10 @@
 #define LED_BRIGHTNESS 255 // LED Brightness from 0 to 255
 #define COLOR_LOW_BAT 255, 0, 0 // Red
 #define COLOR_SD 255, 255, 200 // White
-#define COLOR_CAMERA 255, 50, 0 // Orange
-#define COLOR_GET_FB 255, 100, 200 // Pink
+#define COLOR_CAMERA 255, 40, 0 // Orange
+#define COLOR_GET_FB 255, 150, 0 // Yellow
 #define COLOR_IMU 0, 0, 255 // Blue
-#define COLOR_BAROMETER 255, 0, 255 // Purple
+#define COLOR_BAROMETER 255, 0, 50 // Pink
 #define COLOR_OK 0, 255, 0 // Green
 #define COLOR_PAD_IDLE 0, 255, 0 // Green
 #define COLOR_PAD_IDLE_FLASH 0, 0, 255 // Blue
