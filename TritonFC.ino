@@ -126,8 +126,6 @@ float highestAltitude = 0;
 float maxVel = 0;
 float maxAccel = 0;
 float deployVel;
-float heapUsage;
-float psramUsage;
 float vidFPS;
 
 // imu offsets
@@ -353,10 +351,6 @@ void loop() {
 
         Serial.println("[*] Landing!");
 
-        // Calculate memory usage in percentages
-        heapUsage = (float)(ESP.getHeapSize() - ESP.getFreeHeap()) / ESP.getHeapSize() * 100;
-        psramUsage = (float)(ESP.getPsramSize() - ESP.getFreePsram()) / ESP.getPsramSize() * 100;
-
         vidFPS = stopVideo(); // close and save video file
         saveFlightData(); // save files in flight folder
 
@@ -572,7 +566,7 @@ void saveFlightData() {
 
   // Create stats file
   File statsFile = SD_MMC.open(statsFilePath, FILE_WRITE);
-  statsFile.println("flightNum,apogee (m),maxVel (m/s),maxAccel (G),apogeeTime (s),deployTime (s),flightTime (s),deployVel (m/s),startupVoltage (V),heapUsage,psramUsage,sdUsage,videoRes,videoFPS,logFreq (Hz)"); // Write header line
+  statsFile.println("flightNum,apogee (m),maxVel (m/s),maxAccel (G),apogeeTime (s),deployTime (s),flightTime (s),deployVel (m/s),startupVoltage (V),sdUsage,videoRes,videoFPS,logFreq (Hz)"); // Write header line
   statsFile.print(i);
   statsFile.print(',');
   statsFile.print(highestAltitude);
@@ -590,10 +584,6 @@ void saveFlightData() {
   statsFile.print(deployVel);
   statsFile.print(',');
   statsFile.print(startupVoltage);
-  statsFile.print(',');
-  statsFile.printf("%.1f%%", heapUsage);
-  statsFile.print(',');
-  statsFile.printf("%.1f%%", psramUsage);
   statsFile.print(',');
   statsFile.print(fmtSize(sdUsage));
   statsFile.print(',');
