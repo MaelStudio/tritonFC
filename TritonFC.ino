@@ -56,10 +56,10 @@
 #define COLOR_BAROMETER 255, 0, 50 // Pink
 #define COLOR_OK 0, 255, 0 // Green
 #define COLOR_PAD_IDLE 0, 255, 0 // Green
-#define COLOR_PAD_IDLE_FLASH 0, 0, 255 // Blue
+#define COLOR_PAD_IDLE_FLASH 0, 50, 255 // Blue
 #define COLOR_AIR_0 0, 0, 255 // Blue
-#define COLOR_AIR_1 255, 0, 50 // Red
-#define COLOR_ALTITUDE_FLASH 255, 0, 50 // Pink
+#define COLOR_AIR_1 255, 0, 0 // Red
+#define COLOR_ALTITUDE_FLASH 0, 0, 255 // Blue
 
 // Misc constants
 #define ALPHA 0.98 // Complementary filter coefficient. 1
