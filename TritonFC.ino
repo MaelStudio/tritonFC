@@ -57,8 +57,9 @@
 #define COLOR_OK 0, 255, 0 // Green
 #define COLOR_PAD_IDLE 0, 255, 0 // Green
 #define COLOR_PAD_IDLE_FLASH 0, 0, 255 // Blue
-#define COLOR_LAUNCH 0, 0, 255 // Blue
-#define COLOR_ALTITUDE_FLASH 0, 255, 255 // Cyan
+#define COLOR_AIR_0 0, 0, 255 // Blue
+#define COLOR_AIR_1 255, 0, 50 // Red
+#define COLOR_ALTITUDE_FLASH 255, 0, 50 // Pink
 
 // Misc constants
 #define ALPHA 0.98 // Complementary filter coefficient. 1
@@ -230,7 +231,7 @@ void setup() {
   
   Serial.println("[*] Launch!");
 
-  ledColor(COLOR_LAUNCH);
+  ledColor(COLOR_AIR_0);
 
   // Create CSV log file
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_WRITE);
@@ -291,6 +292,18 @@ void loop() {
   if (baroVel > maxVel) maxVel = baroVel;
   if (acceleration > maxAccel) maxAccel = acceleration;
 
+  /******************** RGB Led *******************/
+
+  static float ledAirColorChangeTime = now;
+  static bool ledAirColor = 0;
+
+  if (now - ledAirColorChangeTime >= 0.06) {
+    if (ledAirColor) ledColor(COLOR_AIR_0);
+    else ledColor(COLOR_AIR_1);
+    ledAirColor = !ledAirColor;
+    ledAirColorChangeTime = now;
+  }
+
   /******************** Apogee detection & Parachute deploy *******************/
 
   if (!apogee) { // This runs until apogee is detected
@@ -335,8 +348,6 @@ void loop() {
 
         vidFPS = stopVideo(); // close and save video file
         saveFlightData(); // save files in flight folder
-
-        ledOff();
 
         servo.detach(); // Free up timer to prevent conflicts with tone()
         while (1) {
