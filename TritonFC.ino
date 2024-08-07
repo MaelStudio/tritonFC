@@ -29,6 +29,10 @@
 #define LOG_FILE_TEMP "/current.csv"
 #define AVI_FILE_TEMP "/current.avi"
 
+// Battery
+#define LOW_VOLTAGE_ALARM 7.4 // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
+#define BAT_DETECT_VOLTAGE 5.0 // Assume that the device is powered via USB if voltage is below this value (battery is unplugged)
+
 // Sensor buffers
 #define SENSORS_CALIBRATION_SAMPLES 500
 #define ACCEL_BUFFER_SIZE 20 // Size of the buffer used to calculate the average acceleration for launch detection
@@ -117,6 +121,7 @@ float stableStartTime;
 
 // Stats
 int logCount = 0;
+float startupVoltage;
 float highestAltitude = 0;
 float maxVel = 0;
 float maxAccel = 0;
@@ -140,6 +145,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n====== Welcome to Triton FC! ======");
 
+  pinMode(BAT_PIN, INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   led.begin();
   led.setBrightness(LED_BRIGHTNESS);
@@ -235,7 +241,7 @@ void setup() {
 
   // Create CSV log file
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_WRITE);
-  logFile.println("t,altitude,accel,vel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,parachute"); // Write header line
+  logFile.println("t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,voltage,parachute"); // Write header line
   logFile.close();
 
   startVideo(AVI_FILE_TEMP); // Create avi file and start video recording
@@ -291,6 +297,11 @@ void loop() {
   // Update flight stats
   if (baroVel > maxVel) maxVel = baroVel;
   if (acceleration > maxAccel) maxAccel = acceleration;
+
+  // Get battery voltage
+  float voltage;
+  if (detectBattery()) voltage = batteryVoltage();
+  else voltage = 0.0;
 
   /******************** RGB Led *******************/
 
@@ -362,7 +373,7 @@ void loop() {
 
   /******************** Data logging to SD *******************/
   
-  // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,parachute
+  // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,voltage,parachute
   logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_APPEND);
   logFile.printf("%.3f", now);
   logFile.print(',');
@@ -396,6 +407,8 @@ void loop() {
   logFile.print(',');
   logFile.print(pressure);
   logFile.print(',');
+  logFile.print(voltage);
+  logFile.print(',');
   logFile.print(parachute);
   logFile.print('\n');
   logFile.close();
@@ -409,6 +422,19 @@ bool startStorage() {
 }
 
 bool initAll() {
+  ledColor(COLOR_LOW_BAT);
+  if (detectBattery()) {
+    startupVoltage = batteryVoltage();
+    if (startupVoltage > LOW_VOLTAGE_ALARM) Serial.printf("Battery is at %.2fV\n", startupVoltage);
+    else {
+      Serial.printf("[!] Low battery: %.2fV\n", startupVoltage);
+      return false;
+    }
+  } else {
+    Serial.println("No battery detected");
+    startupVoltage = 0.0;
+  }
+  
   ledColor(COLOR_SD);
   if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
   else {
@@ -465,6 +491,14 @@ void ledOff() {
 
 void ledOn() {
   ledColor(lastColor[0], lastColor[1], lastColor[2]); // set led to last color
+}
+
+float batteryVoltage() {
+  return analogReadMilliVolts(BAT_PIN) / 1000.0 * (7.86/7.70) / 3.3 * 8.4;
+}
+
+bool detectBattery() {
+  return batteryVoltage() > BAT_DETECT_VOLTAGE;
 }
 
 // IMU and barometer calibration
@@ -555,7 +589,7 @@ void saveFlightData() {
   statsFile.print(',');
   statsFile.print(deployVel);
   statsFile.print(',');
-  statsFile.print("?");
+  statsFile.print(startupVoltage);
   statsFile.print(',');
   statsFile.printf("%.1f%%", heapUsage);
   statsFile.print(',');
