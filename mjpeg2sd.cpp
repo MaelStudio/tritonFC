@@ -238,7 +238,7 @@ bool startCam() {
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.fb_count = FB_BUFFERS;
 
-  config.frame_size = FRAMESIZE_VGA; // image res
+  config.frame_size = FRAMESIZE_SVGA; // image res
   config.jpeg_quality = 4; //0-63, lower number = higher quality
 
   // camera init
