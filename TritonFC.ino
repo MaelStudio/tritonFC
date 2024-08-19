@@ -22,6 +22,7 @@
 #define SD_MMC_D0 8
 
 // SD files
+#define CONFIG_FILE_NAME "/config.cfg"
 #define LOG_DIR_NAME "/flight_%u" // %u will be replaced by the flight number
 #define STATS_FILE_NAME "/flight_%u.csv"
 #define LOG_FILE_NAME "/flight_%u_logs.csv"
@@ -90,6 +91,13 @@ char logDir[FILE_NAME_LEN];
 char logFilePath[PATH_NAME_LEN];
 char aviFilePath[PATH_NAME_LEN];
 char statsFilePath[PATH_NAME_LEN];
+
+// Define default config
+struct Config {
+  char vidRes[10] = "VGA";
+};
+
+Config config;
 
 // Variables
 
@@ -416,6 +424,22 @@ bool startStorage() {
 }
 
 bool initAll() {
+  ledColor(COLOR_SD);
+  if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
+  else {
+    Serial.println("[!] SD card initialization failed");
+    return false;
+  }
+
+  // Load config
+  if (SD_MMC.exists(CONFIG_FILE_NAME)) {
+    loadConfig();
+    Serial.printf("Loaded config from %s\n", CONFIG_FILE_NAME);
+  } else {
+    createDefaultConfig();
+    Serial.printf("Created %s to store default config\n", CONFIG_FILE_NAME);
+  }
+
   ledColor(COLOR_LOW_BAT);
   if (detectBattery()) {
     startupVoltage = batteryVoltage();
@@ -427,13 +451,6 @@ bool initAll() {
   } else {
     Serial.println("No battery detected");
     startupVoltage = 0.0;
-  }
-  
-  ledColor(COLOR_SD);
-  if (startStorage()) Serial.printf("SD card mounted. Size: %s\n", fmtSize(SD_MMC.cardSize()));
-  else {
-    Serial.println("[!] SD card initialization failed");
-    return false;
   }
   
   ledColor(COLOR_CAMERA);
@@ -466,6 +483,44 @@ bool initAll() {
 
   ledColor(COLOR_OK);
   return true;
+}
+
+void createDefaultConfig() {
+  File configFile = SD_MMC.open(CONFIG_FILE_NAME, FILE_WRITE);
+
+  configFile.print("vidRes=");
+  configFile.println(config.vidRes);
+
+  configFile.close();
+}
+
+void loadConfig() {
+  File configFile = SD_MMC.open(CONFIG_FILE_NAME);
+
+  while (configFile.available()) {
+    String line = configFile.readStringUntil('\n');
+    line.trim(); // Remove leading and trailing whitespace
+
+    // Skip empty lines or comments
+    if (line.length() == 0 || line.startsWith("#")) {
+      continue;
+    }
+
+    int delimiterIndex = line.indexOf('=');
+    if (delimiterIndex == -1) continue;
+
+    String key = line.substring(0, delimiterIndex);
+    String value = line.substring(delimiterIndex + 1);
+    key.trim();
+    value.trim();
+
+    // Update the Config struct based on key-value pairs
+    if (key == "vidRes") {
+      value.toCharArray(config.vidRes, sizeof(config.vidRes));
+    } else {
+      Serial.printf("Unknown config key: %s\n", key);
+    }
+  }
 }
 
 void ledColor(byte r, byte g, byte b) {
