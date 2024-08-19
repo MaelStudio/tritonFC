@@ -61,7 +61,7 @@ struct Config {
 
   // Servo positions
   int servoHome = 180;
-  int servoDeploy = 0;
+  int servoDeploy = 90;
 
   // Video settings
   char vidRes[10] = "VGA"; // See frameData in globals.h for all frame sizes
