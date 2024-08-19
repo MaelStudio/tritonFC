@@ -24,11 +24,7 @@
 // SD files
 #define CONFIG_FILE "/config.cfg"
 #define FILE_NAME_LEN 64
-#define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
-
-// Battery
-#define LOW_VOLTAGE_ALARM 7.4 // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
-#define BAT_DETECT_VOLTAGE 5.0 // Assume that the device is powered via USB if voltage is below this value (battery is unplugged)
+#define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // Dir name + slash + file name
 
 // Sensor buffers
 #define SENSORS_CALIBRATION_SAMPLES 500
@@ -37,7 +33,6 @@
 #define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude
 
 // LED colors
-#define LED_BRIGHTNESS 255 // LED Brightness from 0 to 255
 #define COLOR_LOW_BAT 255, 0, 0 // Red
 #define COLOR_SD 255, 255, 200 // White
 #define COLOR_CAMERA 255, 40, 0 // Orange
@@ -46,30 +41,33 @@
 #define COLOR_BAROMETER 255, 0, 50 // Pink
 #define COLOR_OK 0, 255, 0 // Green
 #define COLOR_PAD_IDLE 0, 255, 0 // Green
-#define COLOR_PAD_IDLE_FLASH 0, 50, 255 // Blue
+#define COLOR_PAD_IDLE_FLASH 0, 0, 255 // Blue
 #define COLOR_AIR_0 0, 0, 255 // Blue
 #define COLOR_AIR_1 255, 0, 0 // Red
 #define COLOR_ALTITUDE_FLASH 0, 0, 255 // Blue
 
-// Misc constants
-#define ALPHA 0.98 // Complementary filter coefficient. 1
-#define BEEP_FREQ 2000 // Buzzer beep frequency, 2000 Hz is loudest
-
-// Environment constants
-#define SEA_LEVEL_HPA 1005.00
+// Constants
 #define GRAVITY 9.80665
+#define SEA_LEVEL_HPA 1005.00
+#define ALPHA 0.98 // Complementary filter coefficient
+#define BAT_DETECT_VOLTAGE 5.0 // Assume that the device is powered via USB if voltage is below this value (battery is unplugged)
+#define BEEP_FREQ 2000 // Buzzer beep frequency, 2000 Hz is loudest
 
 // Define config and defaults
 struct Config {
-  bool buzzer = false;
+  // Buzzer and LED
+  bool buzzer = false; // Toggle buzzer
+  byte ledBrightness = 255; // LED brightness from 0 to 255
 
   // Servo positions
   int servoHome = 180;
   int servoDeploy = 0;
 
   // Video settings
-  char vidRes[10] = "VGA";
+  char vidRes[10] = "VGA"; // See frameData in globals.h for all frame sizes
   int vidFPS = 20;
+
+  float lowVoltageAlarm = 7.4; // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
 
   // Launch/apogee/landing detect parameters
   float launchDetectTreshold = 1.5; // In G's, the vertical acceleration required to trigger launch detection
@@ -159,7 +157,6 @@ void setup() {
   pinMode(BAT_PIN, INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   led.begin();
-  led.setBrightness(LED_BRIGHTNESS);
 
   // Alarm if initialization fails
   if (!initAll()) {
@@ -444,11 +441,13 @@ bool initAll() {
     createDefaultConfig();
     Serial.printf("Created %s to store default config\n", CONFIG_FILE);
   }
+  
+  led.setBrightness(config.ledBrightness);
 
   ledColor(COLOR_LOW_BAT);
   if (detectBattery()) {
     startupVoltage = batteryVoltage();
-    if (startupVoltage > LOW_VOLTAGE_ALARM) Serial.printf("Battery is at %.2fV\n", startupVoltage);
+    if (startupVoltage > config.lowVoltageAlarm) Serial.printf("Battery is at %.2fV\n", startupVoltage);
     else {
       Serial.printf("[!] Low battery: %.2fV\n", startupVoltage);
       return false;
@@ -495,6 +494,8 @@ void createDefaultConfig() {
 
   configFile.print("buzzer=");
   configFile.println(config.buzzer ? "true" : "false");
+  configFile.print("ledBrightness=");
+  configFile.println(config.ledBrightness);
   configFile.print("servoHome=");
   configFile.println(config.servoHome);
   configFile.print("servoDeploy=");
@@ -503,6 +504,8 @@ void createDefaultConfig() {
   configFile.println(config.vidRes);
   configFile.print("vidFPS=");
   configFile.println(config.vidFPS);
+  configFile.print("lowVoltageAlarm=");
+  configFile.println(config.lowVoltageAlarm);
   configFile.print("launchDetectTreshold=");
   configFile.println(config.launchDetectTreshold);
   configFile.print("apogeeDetectTreshold=");
@@ -552,6 +555,9 @@ void loadConfig() {
     // Update the Config struct based on key-value pairs
     if (key == "buzzer") {
       config.buzzer = (value.equalsIgnoreCase("true")) ? true : false;
+    } else if (key == "ledBrightness") {
+      if (value.toInt() > 255) config.ledBrightness = 255;
+      else config.ledBrightness = (byte)value.toInt();
     } else if (key == "servoHome") {
       config.servoHome = value.toInt();
     } else if (key == "servoDeploy") {
@@ -560,6 +566,8 @@ void loadConfig() {
       value.toCharArray(config.vidRes, sizeof(config.vidRes));
     } else if (key == "vidFPS") {
       config.vidFPS = value.toInt();
+    } else if (key == "lowVoltageAlarm") {
+      config.lowVoltageAlarm = value.toFloat();
     } else if (key == "launchDetectTreshold") {
       config.launchDetectTreshold = value.toFloat();
     } else if (key == "apogeeDetectTreshold") {

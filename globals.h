@@ -34,30 +34,7 @@
 #define AVI_HEADER_LEN 310 // AVI header length
 #define CHUNK_HDR 8 // bytes per jpeg hdr in AVI 
 
-/******************** Variables *******************/
-
-static File aviFile;
-extern uint8_t aviHeader[];
-extern const uint8_t dcBuf[]; // 00dc
-extern int frameWidth;
-extern int frameHeight;
-
-/******************** Function declarations *******************/
-
-void startVideo(char* fileName);
-float stopVideo();
-
-void showProgress(const char* marker = ".");
-char* fmtSize (uint64_t sizeVal);
-bool startCam(char vidRes[10]);
-void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt);
-void buildAviIdx(size_t dataSize, bool isVid = true);
-void finalizeAviIndex(uint16_t frameCnt);
-void prepAviIndex();
-bool prepRecording(int setFPS);
-size_t writeAviIndex(byte* clientBuf, size_t buffSize);
-
-/******************** Structures *******************/
+/******************** Frame Size *******************/
 
 // indexed by frame size - needs to be consistent with sensor.h framesize_t enum
 
@@ -83,3 +60,26 @@ const frameStruct frameData[14] = {
   {"SXGA", 1280, 1024},
   {"UXGA", 1600, 1200}
 };
+
+/******************** Variables *******************/
+
+static File aviFile;
+extern uint8_t aviHeader[];
+extern const uint8_t dcBuf[]; // 00dc
+extern int frameWidth;
+extern int frameHeight;
+
+/******************** Function declarations *******************/
+
+void startVideo(char* fileName);
+float stopVideo();
+
+void showProgress(const char* marker = ".");
+char* fmtSize (uint64_t sizeVal);
+bool startCam(char vidRes[10]);
+void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt);
+void buildAviIdx(size_t dataSize, bool isVid = true);
+void finalizeAviIndex(uint16_t frameCnt);
+void prepAviIndex();
+bool prepRecording(int setFPS);
+size_t writeAviIndex(byte* clientBuf, size_t buffSize);
