@@ -36,10 +36,6 @@
 #define ALTITUDE_BUFFER_SIZE 20 // Size of the buffer used to calculate the average altitude for apogee detection
 #define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude
 
-// Servo positions
-#define SERVO_HOME 0
-#define SERVO_DEPLOY 180
-
 // LED colors
 #define LED_BRIGHTNESS 255 // LED Brightness from 0 to 255
 #define COLOR_LOW_BAT 255, 0, 0 // Red
@@ -67,6 +63,11 @@
 struct Config {
   bool buzzer = false;
 
+  // Servo positions
+  int servoHome = 180;
+  int servoDeploy = 0;
+
+  // Video settings
   char vidRes[10] = "VGA";
   int vidFPS = 20;
 
@@ -198,7 +199,7 @@ void setup() {
 
   // Set servo to home orientation
   servo.attach(SERVO_PIN);
-  servo.write(SERVO_HOME);
+  servo.write(config.servoHome);
 
   Serial.println("Calibrating sensors... Stay still!");
   calibrateSensors(SENSORS_CALIBRATION_SAMPLES); // IMU and barometer calibration also acts as a delay while servo is homing
@@ -341,7 +342,7 @@ void loop() {
     } else if (highestAltitude - avgAltitude >= config.apogeeDetectTreshold) { // Compare difference between highest recorded altitude and current altitude with apogeeDetectTreshold
       apogee = true;
       servo.attach(SERVO_PIN);
-      servo.write(SERVO_DEPLOY); // deploy parachute
+      servo.write(config.servoDeploy); // deploy parachute
       parachute = true;
       deployTime = now;
       deployVel = abs(baroVel);
@@ -494,6 +495,10 @@ void createDefaultConfig() {
 
   configFile.print("buzzer=");
   configFile.println(config.buzzer ? "true" : "false");
+  configFile.print("servoHome=");
+  configFile.println(config.servoHome);
+  configFile.print("servoDeploy=");
+  configFile.println(config.servoDeploy);
   configFile.print("vidRes=");
   configFile.println(config.vidRes);
   configFile.print("vidFPS=");
@@ -547,6 +552,10 @@ void loadConfig() {
     // Update the Config struct based on key-value pairs
     if (key == "buzzer") {
       config.buzzer = (value.equalsIgnoreCase("true")) ? true : false;
+    } else if (key == "servoHome") {
+      config.servoHome = value.toInt();
+    } else if (key == "servoDeploy") {
+      config.servoDeploy = value.toInt();
     } else if (key == "vidRes") {
       value.toCharArray(config.vidRes, sizeof(config.vidRes));
     } else if (key == "vidFPS") {
