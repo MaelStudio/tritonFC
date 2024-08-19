@@ -5,6 +5,10 @@
 
 #include "globals.h"
 
+// Store video res for flight stats
+int frameWidth = 0;
+int frameHeight = 0;
+
 // SD card storage
 uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
 static size_t highPoint;
@@ -12,8 +16,6 @@ static size_t highPoint;
 // status & control fields
 static uint16_t frameInterval; // units of 0.1ms between frames
 uint8_t FPS = 0;
-uint16_t frameWidth = 0;
-uint16_t frameHeight = 0;
 uint8_t fsizePtr; // index to frameData[]
 uint8_t xclkMhz = 20; // camera clock rate MHz
 #define OneMHz 1000000
@@ -211,7 +213,7 @@ uint8_t setFPS(uint8_t val) {
 
 /******************* Startup ********************/
 
-bool startCam() {
+bool startCam(char vidRes[10]) {
   // configure camera
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -237,10 +239,28 @@ bool startCam() {
   config.grab_mode = CAMERA_GRAB_LATEST;
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.fb_count = FB_BUFFERS;
-
-  config.frame_size = FRAMESIZE_SVGA; // image res
   config.jpeg_quality = 4; //0-63, lower number = higher quality
 
+  bool validFrameSize = false;
+  framesize_t frameSize;
+  for (int i = 0; i < 14; i++) {
+    if (strcmp(frameData[i].frameSizeStr, vidRes) == 0) {
+      frameSize = (framesize_t)i;  // Found resolution index in frameData
+      validFrameSize = true;
+      break;
+    }
+  }
+  if (!validFrameSize) {
+    Serial.printf("Invalid video frame size: %s\n", vidRes);
+    return false;
+  }
+
+  config.frame_size = frameSize; // image res
+  
+  // save frame res
+  frameWidth = frameData[frameSize].frameWidth;
+  frameHeight = frameData[frameSize].frameHeight;
+  
   // camera init
   esp_err_t err = esp_camera_init(&config);
   return err == ESP_OK;
@@ -253,10 +273,6 @@ static void startSDtasks() {
   
   sensor_t * s = esp_camera_sensor_get();
   fsizePtr = s->status.framesize;
-
-  // save frame size
-  frameWidth = frameData[fsizePtr].frameWidth;
-  frameHeight = frameData[fsizePtr].frameHeight;
 
   setFPS(frameData[fsizePtr].defaultFPS);
 }

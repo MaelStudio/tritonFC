@@ -454,7 +454,7 @@ bool initAll() {
   }
   
   ledColor(COLOR_CAMERA);
-  if (startCam()) Serial.println("Camera initialized");
+  if (startCam(config.vidRes)) Serial.println("Camera initialized");
   else {
     Serial.println("[!] Camera init failed");
     return false;
@@ -642,7 +642,7 @@ void saveFlightData() {
   statsFile.print(',');
   statsFile.print(fmtSize(sdUsage));
   statsFile.print(',');
-  statsFile.printf("%ux%u", frameWidth, frameHeight);
+  statsFile.printf("%ix%i", frameWidth, frameHeight);
   statsFile.print(',');
   statsFile.printf("%.1f", vidFPS);
   statsFile.print(',');

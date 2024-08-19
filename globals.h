@@ -39,8 +39,8 @@
 static File aviFile;
 extern uint8_t aviHeader[];
 extern const uint8_t dcBuf[]; // 00dc
-extern uint16_t frameWidth;
-extern uint16_t frameHeight;
+extern int frameWidth;
+extern int frameHeight;
 
 /******************** Function declarations *******************/
 
@@ -49,7 +49,7 @@ float stopVideo();
 
 void showProgress(const char* marker = ".");
 char* fmtSize (uint64_t sizeVal);
-bool startCam();
+bool startCam(char vidRes[10]);
 void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt);
 void buildAviIdx(size_t dataSize, bool isVid = true);
 void finalizeAviIndex(uint16_t frameCnt);
@@ -64,12 +64,12 @@ size_t writeAviIndex(byte* clientBuf, size_t buffSize);
 
 struct frameStruct {
   const char* frameSizeStr;
-  const uint16_t frameWidth;
-  const uint16_t frameHeight;
+  const int frameWidth;
+  const int frameHeight;
   const uint16_t defaultFPS;
 };
 
-const frameStruct frameData[] = {
+const frameStruct frameData[14] = {
   {"96X96", 96, 96, 30},   // 2MP sensors
   {"QQVGA", 160, 120, 30},
   {"QCIF", 176, 144, 30},
