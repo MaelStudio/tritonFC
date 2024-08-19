@@ -86,6 +86,7 @@ char statsFilePath[PATH_NAME_LEN];
 
 // Define default config
 struct Config {
+  bool buzzer = true;
   char vidRes[10] = "VGA";
   
   char logTemp[FILE_NAME_LEN] = "/current.csv";
@@ -161,7 +162,7 @@ void setup() {
   if (!initAll()) {
 
     while (1) {
-      tone(BUZZER_PIN, BEEP_FREQ, 120);
+      beep(BEEP_FREQ, 120);
       ledOn();
       delay(120);
       ledOff();
@@ -177,7 +178,7 @@ void setup() {
   };
 
   for (int i=0; i<4; i++) {
-    tone(BUZZER_PIN, melody[i], 120);
+    beep(melody[i], 120);
     delay(120);
   }
 
@@ -214,7 +215,7 @@ void setup() {
 
     // Beep and flash every second while idle
     if (now - lastIdleBeep >= 1) {
-      tone(BUZZER_PIN, BEEP_FREQ, 60);
+      beep(BEEP_FREQ, 60);
       ledColor(COLOR_PAD_IDLE_FLASH);
       lastIdleBeep = now;
     } else if (now - lastIdleBeep >= 0.1) {
@@ -489,6 +490,8 @@ bool initAll() {
 void createDefaultConfig() {
   File configFile = SD_MMC.open(CONFIG_FILE, FILE_WRITE);
 
+  configFile.print("buzzer=");
+  configFile.println(config.buzzer ? "true" : "false");
   configFile.print("vidRes=");
   configFile.println(config.vidRes);
   configFile.print("logTemp=");
@@ -528,7 +531,9 @@ void loadConfig() {
     value.trim();
 
     // Update the Config struct based on key-value pairs
-    if (key == "vidRes") {
+    if (key == "buzzer") {
+      config.buzzer = (value.equalsIgnoreCase("true")) ? true : false;
+    } else if (key == "vidRes") {
       value.toCharArray(config.vidRes, sizeof(config.vidRes));
     } else if (key == "logTemp") {
       value.toCharArray(config.logTemp, sizeof(config.logTemp));
@@ -546,33 +551,6 @@ void loadConfig() {
       Serial.printf("Unknown config key: %s\n", key);
     }
   }
-}
-
-void ledColor(byte r, byte g, byte b) {
-  led.setPixelColor(0, led.Color(r, g, b));
-  led.show();
-
-  // update last color
-  lastColor[0] = r;
-  lastColor[1] = g;
-  lastColor[2] = b;
-}
-
-void ledOff() {
-  led.setPixelColor(0, led.Color(0, 0, 0));
-  led.show();
-}
-
-void ledOn() {
-  ledColor(lastColor[0], lastColor[1], lastColor[2]); // set led to last color
-}
-
-float batteryVoltage() {
-  return analogReadMilliVolts(BAT_PIN) / 1000.0 * (7.86/7.70) / 3.3 * 8.4;
-}
-
-bool detectBattery() {
-  return batteryVoltage() > BAT_DETECT_VOLTAGE;
 }
 
 // IMU and barometer calibration
@@ -676,11 +654,43 @@ void saveFlightData() {
   statsFile.close();
 }
 
+float batteryVoltage() {
+  return analogReadMilliVolts(BAT_PIN) / 1000.0 * (7.86/7.70) / 3.3 * 8.4;
+}
+
+bool detectBattery() {
+  return batteryVoltage() > BAT_DETECT_VOLTAGE;
+}
+
+void ledColor(byte r, byte g, byte b) {
+  led.setPixelColor(0, led.Color(r, g, b));
+  led.show();
+
+  // update last color
+  lastColor[0] = r;
+  lastColor[1] = g;
+  lastColor[2] = b;
+}
+
+void ledOff() {
+  led.setPixelColor(0, led.Color(0, 0, 0));
+  led.show();
+}
+
+void ledOn() {
+  ledColor(lastColor[0], lastColor[1], lastColor[2]); // set led to last color
+}
+
+void beep(int hz, int duration) {
+  if (!config.buzzer) return;
+  tone(BUZZER_PIN, hz, duration);
+}
+
 void beepDigit(int n) {
   if (n == 0) n = 10; // Beep 10 times for a 0
 
   for (int i=0; i<n; i++) {
-    tone(BUZZER_PIN, BEEP_FREQ, 80);
+    beep(BEEP_FREQ, 80);
     ledColor(COLOR_ALTITUDE_FLASH); // Also flash LED
     delay(80);
     ledOff();
