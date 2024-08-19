@@ -556,8 +556,11 @@ void loadConfig() {
     if (key == "buzzer") {
       config.buzzer = (value.equalsIgnoreCase("true")) ? true : false;
     } else if (key == "ledBrightness") {
-      if (value.toInt() > 255) config.ledBrightness = 255;
-      else config.ledBrightness = (byte)value.toInt();
+      if (value.toInt() > 255) {
+        config.ledBrightness = 255;
+      } else {
+        config.ledBrightness = (byte)value.toInt();
+      }
     } else if (key == "servoHome") {
       config.servoHome = value.toInt();
     } else if (key == "servoDeploy") {
