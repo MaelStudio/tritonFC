@@ -54,8 +54,7 @@ void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt);
 void buildAviIdx(size_t dataSize, bool isVid = true);
 void finalizeAviIndex(uint16_t frameCnt);
 void prepAviIndex();
-bool prepRecording();
-uint8_t setFPS(uint8_t val);
+bool prepRecording(int setFPS);
 size_t writeAviIndex(byte* clientBuf, size_t buffSize);
 
 /******************** Structures *******************/
@@ -66,22 +65,21 @@ struct frameStruct {
   const char* frameSizeStr;
   const int frameWidth;
   const int frameHeight;
-  const uint16_t defaultFPS;
 };
 
 const frameStruct frameData[14] = {
-  {"96X96", 96, 96, 30},   // 2MP sensors
-  {"QQVGA", 160, 120, 30},
-  {"QCIF", 176, 144, 30},
-  {"HQVGA", 240, 176, 30},
-  {"240X240", 240, 240, 30},
-  {"QVGA", 320, 240, 30},
-  {"CIF", 400, 296, 30},
-  {"HVGA", 480, 320, 30},
-  {"VGA", 640, 480, 20},
-  {"SVGA", 800, 600, 20},
-  {"XGA", 1024, 768, 5},
-  {"HD", 1280, 720, 5},
-  {"SXGA", 1280, 1024, 5},
-  {"UXGA", 1600, 1200, 5}
+  {"96X96", 96, 96},   // 2MP sensors
+  {"QQVGA", 160, 120},
+  {"QCIF", 176, 144},
+  {"HQVGA", 240, 176},
+  {"240X240", 240, 240},
+  {"QVGA", 320, 240},
+  {"CIF", 400, 296},
+  {"HVGA", 480, 320},
+  {"VGA", 640, 480},
+  {"SVGA", 800, 600},
+  {"XGA", 1024, 768},
+  {"HD", 1280, 720},
+  {"SXGA", 1280, 1024},
+  {"UXGA", 1600, 1200}
 };

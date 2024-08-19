@@ -14,8 +14,8 @@ uint8_t iSDbuffer[(RAMSIZE + CHUNK_HDR) * 2];
 static size_t highPoint;
 
 // status & control fields
+int FPS = 0;
 static uint16_t frameInterval; // units of 0.1ms between frames
-uint8_t FPS = 0;
 uint8_t fsizePtr; // index to frameData[]
 uint8_t xclkMhz = 20; // camera clock rate MHz
 #define OneMHz 1000000
@@ -201,16 +201,6 @@ static void captureTask(void* parameter) {
   vTaskDelete(NULL);
 }
 
-uint8_t setFPS(uint8_t val) {
-  // change or retrieve FPS value
-  if (val) {
-    FPS = val;
-    // change frame timer which drives the task
-    controlFrameTimer(true);
-  }
-  return FPS;
-}
-
 /******************* Startup ********************/
 
 bool startCam(char vidRes[10]) {
@@ -267,24 +257,25 @@ bool startCam(char vidRes[10]) {
 
 }
 
-static void startSDtasks() {
+static void startSDtasks(int setFPS) {
   // tasks to manage SD card operation
   xTaskCreate(&captureTask, "captureTask", CAPTURE_STACK_SIZE, NULL, 1, &captureHandle);
   
   sensor_t * s = esp_camera_sensor_get();
   fsizePtr = s->status.framesize;
 
-  setFPS(frameData[fsizePtr].defaultFPS);
+  FPS = setFPS;
+  controlFrameTimer(true); // frame timer which drives the task
 }
 
-bool prepRecording() {
+bool prepRecording(int setFPS) {
   // initialisation & prep for AVI capture
   camera_fb_t* fb = esp_camera_fb_get();
   if (fb == NULL) return false;
 
   esp_camera_fb_return(fb);
   fb = NULL;
-  startSDtasks();
+  startSDtasks(setFPS);
   return true;
 }
 

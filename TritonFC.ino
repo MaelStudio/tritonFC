@@ -66,7 +66,9 @@
 // Define config and defaults
 struct Config {
   bool buzzer = false;
+
   char vidRes[10] = "VGA";
+  int vidFPS = 20;
 
   // Launch/apogee/landing detect parameters
   float launchDetectTreshold = 1.5; // In G's, the vertical acceleration required to trigger launch detection
@@ -463,7 +465,7 @@ bool initAll() {
   }
 
   ledColor(COLOR_GET_FB);
-  if (prepRecording()) Serial.println("Ready to record");
+  if (prepRecording(config.vidFPS)) Serial.println("Ready to record");
   else {
     Serial.println("[!] Failed to get camera frame");
     return false;
@@ -494,6 +496,8 @@ void createDefaultConfig() {
   configFile.println(config.buzzer ? "true" : "false");
   configFile.print("vidRes=");
   configFile.println(config.vidRes);
+  configFile.print("vidFPS=");
+  configFile.println(config.vidFPS);
   configFile.print("launchDetectTreshold=");
   configFile.println(config.launchDetectTreshold);
   configFile.print("apogeeDetectTreshold=");
@@ -545,6 +549,8 @@ void loadConfig() {
       config.buzzer = (value.equalsIgnoreCase("true")) ? true : false;
     } else if (key == "vidRes") {
       value.toCharArray(config.vidRes, sizeof(config.vidRes));
+    } else if (key == "vidFPS") {
+      config.vidFPS = value.toInt();
     } else if (key == "launchDetectTreshold") {
       config.launchDetectTreshold = value.toFloat();
     } else if (key == "apogeeDetectTreshold") {
