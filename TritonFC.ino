@@ -22,13 +22,9 @@
 #define SD_MMC_D0 8
 
 // SD files
-#define CONFIG_FILE_NAME "/config.cfg"
-#define LOG_DIR_NAME "/flight_%u" // %u will be replaced by the flight number
-#define STATS_FILE_NAME "/flight_%u.csv"
-#define LOG_FILE_NAME "/flight_%u_logs.csv"
-#define AVI_FILE_NAME "/flight_%u.avi"
-#define LOG_FILE_TEMP "/current.csv"
-#define AVI_FILE_TEMP "/current.avi"
+#define CONFIG_FILE "/config.cfg"
+#define FILE_NAME_LEN 64
+#define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
 
 // Battery
 #define LOW_VOLTAGE_ALARM 7.4 // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
@@ -70,10 +66,6 @@
 #define ALPHA 0.98 // Complementary filter coefficient. 1
 #define BEEP_FREQ 2000 // Buzzer beep frequency, 2000 Hz is loudest
 
-// File name length
-#define FILE_NAME_LEN 64
-#define PATH_NAME_LEN (FILE_NAME_LEN + 1 + FILE_NAME_LEN) // dir name + slash + file name
-
 // Environment constants
 #define SEA_LEVEL_HPA 1005.00
 #define GRAVITY 9.80665
@@ -95,6 +87,15 @@ char statsFilePath[PATH_NAME_LEN];
 // Define default config
 struct Config {
   char vidRes[10] = "VGA";
+  
+  char logTemp[FILE_NAME_LEN] = "/current.csv";
+  char aviTemp[FILE_NAME_LEN] = "/current.avi";
+
+  // In file names, %i will be replaced by the flight number
+  char logDir[FILE_NAME_LEN] = "/flight_%i";
+  char statsFile[PATH_NAME_LEN] = "/flight_%i.csv";
+  char logFile[PATH_NAME_LEN] = "/flight_%i_logs.csv";
+  char aviFile[PATH_NAME_LEN] = "/flight_%i.avi";
 };
 
 Config config;
@@ -246,11 +247,11 @@ void setup() {
   ledColor(COLOR_AIR_0);
 
   // Create CSV log file
-  logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_WRITE);
+  logFile = SD_MMC.open(config.logTemp, FILE_WRITE);
   logFile.println("t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,voltage,parachute"); // Write header line
   logFile.close();
 
-  startVideo(AVI_FILE_TEMP); // Create avi file and start video recording
+  startVideo(config.aviTemp); // Create avi file and start video recording
 }
 
 void loop() {
@@ -376,7 +377,7 @@ void loop() {
   /******************** Data logging to SD *******************/
   
   // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,voltage,parachute
-  logFile = SD_MMC.open(LOG_FILE_TEMP, FILE_APPEND);
+  logFile = SD_MMC.open(config.logTemp, FILE_APPEND);
   logFile.printf("%.3f", now);
   logFile.print(',');
   logFile.print(altitude);
@@ -432,12 +433,12 @@ bool initAll() {
   }
 
   // Load config
-  if (SD_MMC.exists(CONFIG_FILE_NAME)) {
+  if (SD_MMC.exists(CONFIG_FILE)) {
     loadConfig();
-    Serial.printf("Loaded config from %s\n", CONFIG_FILE_NAME);
+    Serial.printf("Loaded config from %s\n", CONFIG_FILE);
   } else {
     createDefaultConfig();
-    Serial.printf("Created %s to store default config\n", CONFIG_FILE_NAME);
+    Serial.printf("Created %s to store default config\n", CONFIG_FILE);
   }
 
   ledColor(COLOR_LOW_BAT);
@@ -486,16 +487,28 @@ bool initAll() {
 }
 
 void createDefaultConfig() {
-  File configFile = SD_MMC.open(CONFIG_FILE_NAME, FILE_WRITE);
+  File configFile = SD_MMC.open(CONFIG_FILE, FILE_WRITE);
 
   configFile.print("vidRes=");
   configFile.println(config.vidRes);
+  configFile.print("logTemp=");
+  configFile.println(config.logTemp);
+  configFile.print("aviTemp=");
+  configFile.println(config.aviTemp);
+  configFile.print("logDir=");
+  configFile.println(config.logDir);
+  configFile.print("statsFile=");
+  configFile.println(config.statsFile);
+  configFile.print("logFile=");
+  configFile.println(config.logFile);
+  configFile.print("aviFile=");
+  configFile.println(config.aviFile);
 
   configFile.close();
 }
 
 void loadConfig() {
-  File configFile = SD_MMC.open(CONFIG_FILE_NAME);
+  File configFile = SD_MMC.open(CONFIG_FILE);
 
   while (configFile.available()) {
     String line = configFile.readStringUntil('\n');
@@ -517,6 +530,18 @@ void loadConfig() {
     // Update the Config struct based on key-value pairs
     if (key == "vidRes") {
       value.toCharArray(config.vidRes, sizeof(config.vidRes));
+    } else if (key == "logTemp") {
+      value.toCharArray(config.logTemp, sizeof(config.logTemp));
+    } else if (key == "aviTemp") {
+      value.toCharArray(config.aviTemp, sizeof(config.aviTemp));
+    } else if (key == "logDir") {
+      value.toCharArray(config.logDir, sizeof(config.logDir));
+    } else if (key == "statsFile") {
+      value.toCharArray(config.statsFile, sizeof(config.statsFile));
+    } else if (key == "logFile") {
+      value.toCharArray(config.logFile, sizeof(config.logFile));
+    } else if (key == "aviFile") {
+      value.toCharArray(config.aviFile, sizeof(config.aviFile));
     } else {
       Serial.printf("Unknown config key: %s\n", key);
     }
@@ -588,25 +613,25 @@ void calibrateSensors(int samples) {
 void saveFlightData() {
   // Find flight number
   int i = 1;
-  snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
+  snprintf(logDir, sizeof(logDir), config.logDir, i);
   while(SD_MMC.exists(logDir)) {
     i++;
-    snprintf(logDir, sizeof(logDir), LOG_DIR_NAME, i);
+    snprintf(logDir, sizeof(logDir), config.logDir, i);
   }
   // Create log dir
   SD_MMC.mkdir(logDir);
 
   // Make file paths
-  snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, LOG_FILE_NAME); // Add dir
-  snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %u by i
-  snprintf(aviFilePath, sizeof(aviFilePath), "%s%s", logDir, AVI_FILE_NAME); // Add dir
-  snprintf(aviFilePath, sizeof(aviFilePath), aviFilePath, i); // Replace %u by i
-  snprintf(statsFilePath, sizeof(statsFilePath), "%s%s", logDir, STATS_FILE_NAME); // Add dir
-  snprintf(statsFilePath, sizeof(statsFilePath), statsFilePath, i); // Replace %u by i
+  snprintf(logFilePath, sizeof(logFilePath), "%s%s", logDir, config.logFile); // Add dir
+  snprintf(logFilePath, sizeof(logFilePath), logFilePath, i); // Replace %i by i
+  snprintf(aviFilePath, sizeof(aviFilePath), "%s%s", logDir, config.aviFile); // Add dir
+  snprintf(aviFilePath, sizeof(aviFilePath), aviFilePath, i); // Replace %i by i
+  snprintf(statsFilePath, sizeof(statsFilePath), "%s%s", logDir, config.statsFile); // Add dir
+  snprintf(statsFilePath, sizeof(statsFilePath), statsFilePath, i); // Replace %i by i
 
   // Rename files
-  SD_MMC.rename(LOG_FILE_TEMP, logFilePath);
-  SD_MMC.rename(AVI_FILE_TEMP, aviFilePath);
+  SD_MMC.rename(config.logTemp, logFilePath);
+  SD_MMC.rename(config.aviTemp, aviFilePath);
 
   // Calculate files size
   unsigned long sdUsage = 0;
