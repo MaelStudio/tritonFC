@@ -36,13 +36,6 @@
 #define ALTITUDE_BUFFER_SIZE 20 // Size of the buffer used to calculate the average altitude for apogee detection
 #define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude
 
-// Launch/apogee/landing detect parameters
-#define LAUNCH_DETECT_THRESHOLD 1.5 // In G's, the vertical acceleration required to trigger launch detection
-#define APOGEE_DETECT_THRESHOLD 1.0 // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
-#define LANDING_DETECT_TRESHOLD 0.5 // In meters, maximum velocity allowed to consider the rocket to be stable
-#define LANDING_DETECT_DURATION 5.0 // In seconds, duration over which the velocity must stay below LANDING_DETECT_TRESHOLD to trigger landing detection
-#define LANDING_APOGEE_DELAY 5.0 // In seconds, minimum delay between apogee and landing detection
-
 // Servo positions
 #define SERVO_HOME 0
 #define SERVO_DEPLOY 180
@@ -70,6 +63,30 @@
 #define SEA_LEVEL_HPA 1005.00
 #define GRAVITY 9.80665
 
+// Define config and defaults
+struct Config {
+  bool buzzer = false;
+  char vidRes[10] = "VGA";
+
+  // Launch/apogee/landing detect parameters
+  float launchDetectTreshold = 1.5; // In G's, the vertical acceleration required to trigger launch detection
+  float apogeeDetectTreshold = 1.0; // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
+  float landingDetectTreshold = 0.5; // In meters, maximum velocity allowed to consider the rocket to be stable
+  float landingDetectDuration = 5.0; // In seconds, duration over which the velocity must stay below landingDetectTreshold to trigger landing detection
+  float landingApogeeDelay = 5.0; // In seconds, minimum delay between apogee and landing detection
+  
+  char logTemp[FILE_NAME_LEN] = "/current.csv";
+  char aviTemp[FILE_NAME_LEN] = "/current.avi";
+
+  // In file names, %i will be replaced by the flight number
+  char logDir[FILE_NAME_LEN] = "/flight_%i";
+  char statsFile[PATH_NAME_LEN] = "/flight_%i.csv";
+  char logFile[PATH_NAME_LEN] = "/flight_%i_logs.csv";
+  char aviFile[PATH_NAME_LEN] = "/flight_%i.avi";
+};
+
+Config config;
+
 // Sensors and actuators
 Adafruit_MPU6050 imu;
 Adafruit_BMP280 barometer;
@@ -83,23 +100,6 @@ char logDir[FILE_NAME_LEN];
 char logFilePath[PATH_NAME_LEN];
 char aviFilePath[PATH_NAME_LEN];
 char statsFilePath[PATH_NAME_LEN];
-
-// Define default config
-struct Config {
-  bool buzzer = true;
-  char vidRes[10] = "VGA";
-  
-  char logTemp[FILE_NAME_LEN] = "/current.csv";
-  char aviTemp[FILE_NAME_LEN] = "/current.avi";
-
-  // In file names, %i will be replaced by the flight number
-  char logDir[FILE_NAME_LEN] = "/flight_%i";
-  char statsFile[PATH_NAME_LEN] = "/flight_%i.csv";
-  char logFile[PATH_NAME_LEN] = "/flight_%i_logs.csv";
-  char aviFile[PATH_NAME_LEN] = "/flight_%i.avi";
-};
-
-Config config;
 
 // Variables
 
@@ -235,7 +235,7 @@ void setup() {
     }
     float avgAY = sum / ACCEL_BUFFER_SIZE;
 
-    if (avgAY >= LAUNCH_DETECT_THRESHOLD) {  // Compare average vertical acceleration to LAUNCH_DETECT_THRESHOLD
+    if (avgAY >= config.launchDetectTreshold) {  // Compare average vertical acceleration to launchDetectTreshold
       launch = true;
       break; // Go to loop to start recording live flight data
     }
@@ -336,7 +336,7 @@ void loop() {
     if (avgAltitude > highestAltitude) { // Keep track of highest recorded altitude
       highestAltitude = avgAltitude;
       apogeeTime = now;
-    } else if (highestAltitude - avgAltitude >= APOGEE_DETECT_THRESHOLD) { // Compare difference between highest recorded altitude and current altitude with APOGEE_DETECT_THRESHOLD
+    } else if (highestAltitude - avgAltitude >= config.apogeeDetectTreshold) { // Compare difference between highest recorded altitude and current altitude with apogeeDetectTreshold
       apogee = true;
       servo.attach(SERVO_PIN);
       servo.write(SERVO_DEPLOY); // deploy parachute
@@ -350,12 +350,12 @@ void loop() {
 
   /******************** Landing detection *******************/
 
-  if (!landed && apogee && (now - apogeeTime) >= LANDING_APOGEE_DELAY) {
-    if (abs(baroVel) <= LANDING_DETECT_TRESHOLD) {
+  if (!landed && apogee && (now - apogeeTime) >= config.landingApogeeDelay) {
+    if (abs(baroVel) <= config.landingDetectTreshold) {
       if (!stable) {
         stable = true;
         stableStartTime = now;
-      } else if (now - stableStartTime >= LANDING_DETECT_DURATION) {
+      } else if (now - stableStartTime >= config.landingDetectDuration) {
         landed = true;
         flightTime = now;
 
@@ -494,6 +494,16 @@ void createDefaultConfig() {
   configFile.println(config.buzzer ? "true" : "false");
   configFile.print("vidRes=");
   configFile.println(config.vidRes);
+  configFile.print("launchDetectTreshold=");
+  configFile.println(config.launchDetectTreshold);
+  configFile.print("apogeeDetectTreshold=");
+  configFile.println(config.apogeeDetectTreshold);
+  configFile.print("landingDetectTreshold=");
+  configFile.println(config.landingDetectTreshold);
+  configFile.print("landingDetectDuration=");
+  configFile.println(config.landingDetectDuration);
+  configFile.print("landingApogeeDelay=");
+  configFile.println(config.landingApogeeDelay);
   configFile.print("logTemp=");
   configFile.println(config.logTemp);
   configFile.print("aviTemp=");
@@ -535,6 +545,16 @@ void loadConfig() {
       config.buzzer = (value.equalsIgnoreCase("true")) ? true : false;
     } else if (key == "vidRes") {
       value.toCharArray(config.vidRes, sizeof(config.vidRes));
+    } else if (key == "launchDetectTreshold") {
+      config.launchDetectTreshold = value.toFloat();
+    } else if (key == "apogeeDetectTreshold") {
+      config.apogeeDetectTreshold = value.toFloat();
+    } else if (key == "landingDetectTreshold") {
+      config.landingDetectTreshold = value.toFloat();
+    } else if (key == "landingDetectDuration") {
+      config.landingDetectDuration = value.toFloat();
+    } else if (key == "landingApogeeDelay") {
+      config.landingApogeeDelay = value.toFloat();
     } else if (key == "logTemp") {
       value.toCharArray(config.logTemp, sizeof(config.logTemp));
     } else if (key == "aviTemp") {
