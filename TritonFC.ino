@@ -2,13 +2,13 @@
 #include <SD_MMC.h>
 #include <FS.h>
 #include <Wire.h>
+#include <CircularBuffer.hpp>
+#include <ESP32Servo.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_BMP280.h>
-#include <ESP32Servo.h>
 #include <Adafruit_NeoPixel.h>
-#include <CircularBuffer.hpp>
 
-#include "globals.h"
+#include "src/mjpeg2sd/mjpeg2sd.h"
 
 // Pins
 #define BAT_PIN D0
