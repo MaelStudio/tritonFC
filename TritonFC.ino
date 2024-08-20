@@ -61,7 +61,7 @@ struct Config {
 
   // Servo positions
   int servoHome = 180;
-  int servoDeploy = 90;
+  int servoDeploy = 0;
 
   // Video settings
   char vidRes[10] = "VGA"; // See frameData in globals.h for all frame sizes
@@ -169,19 +169,7 @@ void setup() {
       delay(50);
     }
   }
-
-  delay(300);
-
-  // Play startup melody
-  const int melody[] = {
-    880, 1040, 1320, 1560
-  };
-
-  for (int i=0; i<4; i++) {
-    beep(melody[i], 120);
-    delay(120);
-  }
-
+  
   // Set MPU6050 range
   imu.setAccelerometerRange(MPU6050_RANGE_16_G);
   imu.setGyroRange(MPU6050_RANGE_500_DEG);
@@ -194,6 +182,18 @@ void setup() {
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_1);   /* Standby time. */
 
+  delay(200);
+
+  // Play startup melody
+  const int melody[] = {
+    880, 1040, 1320, 1560
+  };
+
+  for (int i=0; i<4; i++) {
+    beep(melody[i], 120);
+    delay(120);
+  }
+
   // Set servo to home orientation
   servo.attach(SERVO_PIN);
   servo.write(config.servoHome);
@@ -204,14 +204,13 @@ void setup() {
   servo.detach(); // Free up timer to prevent conflicts with tone()
 
   Serial.println("Setup complete");
-
   ledColor(COLOR_PAD_IDLE);
 
   // Detect launch
   while(!launch) { // While the rocket is idle on the pad, until launch is detected
     // Get time
     float now = micros() / 1000000.0;
-    static float lastIdleBeep = now;
+    static float lastIdleBeep = now-1;
 
     // Beep and flash every second while idle
     if (now - lastIdleBeep >= 1) {
