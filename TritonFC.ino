@@ -67,7 +67,9 @@ struct Config {
   char vidRes[10] = "VGA"; // See frameData in globals.h for all frame sizes
   int vidFPS = 20;
 
+  // Battery
   float lowVoltageAlarm = 7.4; // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
+  float voltageOffset = 0.0; // Voltage readout offset
 
   // Launch/apogee/landing detect parameters
   float launchDetectTreshold = 1.5; // In G's, the vertical acceleration required to trigger launch detection
@@ -505,6 +507,8 @@ void createDefaultConfig() {
   configFile.println(config.vidFPS);
   configFile.print("lowVoltageAlarm=");
   configFile.println(config.lowVoltageAlarm);
+  configFile.print("voltageOffset=");
+  configFile.println(config.voltageOffset);
   configFile.print("launchDetectTreshold=");
   configFile.println(config.launchDetectTreshold);
   configFile.print("apogeeDetectTreshold=");
@@ -570,6 +574,8 @@ void loadConfig() {
       config.vidFPS = value.toInt();
     } else if (key == "lowVoltageAlarm") {
       config.lowVoltageAlarm = value.toFloat();
+    } else if (key == "voltageOffset") {
+      config.voltageOffset = value.toFloat();
     } else if (key == "launchDetectTreshold") {
       config.launchDetectTreshold = value.toFloat();
     } else if (key == "apogeeDetectTreshold") {
@@ -700,7 +706,7 @@ void saveFlightData() {
 }
 
 float batteryVoltage() {
-  return analogReadMilliVolts(BAT_PIN) / 1000.0 * (7.86/7.70) / 3.3 * 8.4;
+  return (analogReadMilliVolts(BAT_PIN) / 1000.0 / 3.3 * 8.4 * (8.21 / 7.83)) + config.voltageOffset;
 }
 
 bool detectBattery() {
