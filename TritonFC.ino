@@ -706,7 +706,7 @@ void saveFlightData() {
 }
 
 float batteryVoltage() {
-  return (analogReadMilliVolts(BAT_PIN) / 1000.0 / 3.3 * 8.4 * (8.21 / 7.83)) + config.voltageOffset;
+  return (analogReadMilliVolts(BAT_PIN) / 1000.0 / 3.3 * 8.4 * (7.59 / 7.46)) + config.voltageOffset;
 }
 
 bool detectBattery() {
