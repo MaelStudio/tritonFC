@@ -74,7 +74,6 @@ extern int frameHeight;
 void startVideo(char* fileName);
 float stopVideo();
 
-void showProgress(const char* marker = ".");
 char* fmtSize (uint64_t sizeVal);
 bool startCam(char vidRes[10]);
 void buildAviHdr(uint8_t FPS, uint8_t frameType, uint16_t frameCnt);

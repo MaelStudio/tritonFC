@@ -253,6 +253,7 @@ void setup() {
   logFile.close();
 
   startVideo(config.aviTemp); // Create avi file and start video recording
+  Serial.println("Started video recording");
 }
 
 void loop() {

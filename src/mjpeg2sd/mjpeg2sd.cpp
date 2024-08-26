@@ -182,8 +182,6 @@ static boolean processFrame() {
 
     saveFrame(fb);
     esp_camera_fb_return(fb);
-
-    showProgress();
   }
 
   return true;
@@ -277,18 +275,6 @@ bool prepRecording(int setFPS) {
   fb = NULL;
   startSDtasks(setFPS);
   return true;
-}
-
-/****** misc ******/
-
-void showProgress(const char* marker) {
-  // show progess as dots 
-  static uint8_t dotCnt = 0;
-  Serial.print(marker); // progress marker
-  if (++dotCnt >= FPS*5) {
-    dotCnt = 0;
-    Serial.println(""); // new line every 5 seconds
-  }
 }
 
 char* fmtSize (uint64_t sizeVal) {
