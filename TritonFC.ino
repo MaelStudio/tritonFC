@@ -116,7 +116,6 @@ sensors_event_t accel, gyro, temp;
 float yaw = 0;
 float pitch = 0;
 float roll = 0;
-float accelVel = 0;
 bool stable;
 
 // State
@@ -250,7 +249,7 @@ void setup() {
 
   // Create CSV log file
   logFile = SD_MMC.open(config.logTemp, FILE_WRITE);
-  logFile.println("t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,voltage,parachute"); // Write header line
+  logFile.println("t,altitude,vel,accel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,temperature,P,voltage,parachute"); // Write header line
   logFile.close();
 
   startVideo(config.aviTemp); // Create avi file and start video recording
@@ -300,11 +299,10 @@ void loop() {
   yaw = ALPHA * yaw + (1.0 - ALPHA) * accelYaw;
   pitch = ALPHA * pitch + (1.0 - ALPHA) * accelPitch;
   
-  accelVel += (aY - GRAVITY) * dt; // Integrate vertical accel to get an estimation of velocity
-  float baroVel = (altitude - altitudeBuffer[altitudeBuffer.size() - timeBuffer.size()]) / (now - timeBuffer[0]); // Vertical velocity in m/s, calculated from previous buffered altitude readings
+  float vel = (altitude - altitudeBuffer[altitudeBuffer.size() - timeBuffer.size()]) / (now - timeBuffer[0]); // Vertical velocity in m/s, calculated from previous buffered altitude readings
 
   // Update flight stats
-  if (baroVel > maxVel) maxVel = baroVel;
+  if (vel > maxVel) maxVel = vel;
   if (acceleration > maxAccel) maxAccel = acceleration;
 
   // Get battery voltage
@@ -343,7 +341,7 @@ void loop() {
       servo.write(config.servoDeploy); // deploy parachute
       parachute = true;
       deployTime = now;
-      deployVel = abs(baroVel);
+      deployVel = abs(vel);
 
       Serial.println("[*] Apogee!");
     }
@@ -352,7 +350,7 @@ void loop() {
   /******************** Landing detection *******************/
 
   if (!landed && apogee && (now - apogeeTime) >= config.landingApogeeDelay) {
-    if (abs(baroVel) <= config.landingDetectTreshold) {
+    if (abs(vel) <= config.landingDetectTreshold) {
       if (!stable) {
         stable = true;
         stableStartTime = now;
@@ -378,17 +376,15 @@ void loop() {
 
   /******************** Data logging to SD *******************/
   
-  // t,altitude,vel,accel,accelVel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,T,P,voltage,parachute
+  // t,altitude,vel,accel,yaw,pitch,roll,aX,aY,aZ,gX,gY,gZ,temperature,P,voltage,parachute
   logFile = SD_MMC.open(config.logTemp, FILE_APPEND);
   logFile.printf("%.3f", now);
   logFile.print(',');
   logFile.print(altitude);
   logFile.print(',');
-  logFile.print(baroVel);
+  logFile.print(vel);
   logFile.print(',');
   logFile.print(acceleration);
-  logFile.print(',');
-  logFile.print(accelVel);
   logFile.print(',');
   logFile.print(yaw);
   logFile.print(',');
