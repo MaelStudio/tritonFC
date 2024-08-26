@@ -56,27 +56,27 @@
 // Define config and defaults
 struct Config {
   // Buzzer and LED
-  bool buzzer = false; // Toggle buzzer
+  bool buzzer = true; // Toggle buzzer
   byte ledBrightness = 255; // LED brightness from 0 to 255
 
   // Servo positions
   int servoHome = 180;
-  int servoDeploy = 0;
+  int servoDeploy = 80;
 
   // Video settings
   char vidRes[10] = "VGA"; // See frameData in globals.h for all frame sizes
   int vidFPS = 20;
 
   // Battery
-  float lowVoltageAlarm = 7.4; // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
-  float voltageOffset = 0.0; // Voltage readout offset
+  float lowVoltageAlarm = 7.40; // Battery voltage is checked at startup, the alarm will ring if the voltage is below this value (On a 2S lipo, 7.4V is 3.7V per cell)
+  float voltageOffset = 0.00; // Voltage readout offset
 
   // Launch/apogee/landing detect parameters
-  float launchDetectTreshold = 1.5; // In G's, the vertical acceleration required to trigger launch detection
-  float apogeeDetectTreshold = 1.0; // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
-  float landingDetectTreshold = 0.5; // In meters, maximum velocity allowed to consider the rocket to be stable
-  float landingDetectDuration = 5.0; // In seconds, duration over which the velocity must stay below landingDetectTreshold to trigger landing detection
-  float landingApogeeDelay = 5.0; // In seconds, minimum delay between apogee and landing detection
+  float launchDetectTreshold = 1.50; // In G's, the vertical acceleration required to trigger launch detection
+  float apogeeDetectTreshold = 1.00; // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
+  float landingDetectTreshold = 0.50; // In meters, maximum velocity allowed to consider the rocket to be stable
+  float landingDetectDuration = 5.00; // In seconds, duration over which the velocity must stay below landingDetectTreshold to trigger landing detection
+  float landingApogeeDelay = 5.00; // In seconds, minimum delay between apogee and landing detection
   
   char logTemp[FILE_NAME_LEN] = "/current.csv";
   char aviTemp[FILE_NAME_LEN] = "/current.avi";
