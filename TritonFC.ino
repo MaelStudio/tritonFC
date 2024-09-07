@@ -28,8 +28,8 @@
 
 // Sensor buffers
 #define SENSORS_CALIBRATION_SAMPLES 500
-#define ACCEL_BUFFER_SIZE 20 // Size of the buffer used to calculate the average acceleration for launch detection
-#define ALTITUDE_BUFFER_SIZE 20 // Size of the buffer used to calculate the average altitude for apogee detection
+#define ACCEL_BUFFER_SIZE 10 // Size of the buffer used to calculate the average acceleration for launch detection
+#define ALTITUDE_BUFFER_SIZE 10 // Size of the buffer used to calculate the average altitude for apogee detection
 #define TIME_BUFFER_SIZE 10 // Must be <= ALTITUDE_BUFFER_SIZE. Size of the buffer used to calculate the vertical velocity based on altitude
 
 // LED colors
