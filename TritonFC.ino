@@ -77,6 +77,7 @@ struct Config {
   float landingDetectTreshold = 0.50; // In meters, maximum velocity allowed to consider the rocket to be stable
   float landingDetectDuration = 5.00; // In seconds, duration over which the velocity must stay below landingDetectTreshold to trigger landing detection
   float landingApogeeDelay = 5.00; // In seconds, minimum delay between apogee and landing detection
+  float minDeployTime = 2.0; // In seconds, minimum time for parachute deploy
   
   char logTemp[FILE_NAME_LEN] = "/current.csv";
   char aviTemp[FILE_NAME_LEN] = "/current.avi";
@@ -336,7 +337,7 @@ void loop() {
     if (avgAltitude > highestAltitude) { // Keep track of highest recorded altitude
       highestAltitude = avgAltitude;
       apogeeTime = now;
-    } else if (highestAltitude - avgAltitude >= config.apogeeDetectTreshold) { // Compare difference between highest recorded altitude and current altitude with apogeeDetectTreshold
+    } else if (now >= config.minDeployTime && highestAltitude - avgAltitude >= config.apogeeDetectTreshold) { // Compare difference between highest recorded altitude and current altitude with apogeeDetectTreshold
       apogee = true;
       servo.attach(SERVO_PIN);
       servo.write(config.servoDeploy); // deploy parachute
@@ -516,6 +517,8 @@ void createDefaultConfig() {
   configFile.println(config.landingDetectDuration);
   configFile.print("landingApogeeDelay=");
   configFile.println(config.landingApogeeDelay);
+  configFile.print("minDeployTime=");
+  configFile.println(config.minDeployTime);
   configFile.print("logTemp=");
   configFile.println(config.logTemp);
   configFile.print("aviTemp=");
@@ -583,6 +586,8 @@ void loadConfig() {
       config.landingDetectDuration = value.toFloat();
     } else if (key == "landingApogeeDelay") {
       config.landingApogeeDelay = value.toFloat();
+    } else if (key == "minDeployTime") {
+      config.minDeployTime = value.toFloat();
     } else if (key == "logTemp") {
       value.toCharArray(config.logTemp, sizeof(config.logTemp));
     } else if (key == "aviTemp") {
