@@ -64,7 +64,7 @@ struct Config {
   int servoDeploy = 80;
 
   // Video settings
-  char vidRes[10] = "VGA"; // See frameData in globals.h for all frame sizes
+  char vidRes[10] = "VGA"; // See frameData in mjpeg2sd.h for all frame sizes
   int vidFPS = 20;
 
   // Battery
