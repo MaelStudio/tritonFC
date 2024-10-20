@@ -74,8 +74,8 @@ struct Config {
   // Launch/apogee/landing detect parameters
   float launchDetectTreshold = 1.50; // In G's, the vertical acceleration required to trigger launch detection
   float apogeeDetectTreshold = 1.00; // In meters, difference between highest recorded altitude and current altitude required to trigger apogee detection
-  float landingDetectTreshold = 0.50; // In meters, maximum velocity allowed to consider the rocket to be stable
-  float landingDetectDuration = 5.00; // In seconds, duration over which the velocity must stay below landingDetectTreshold to trigger landing detection
+  float landingDetectTreshold = 1.00; // In meters per second, maximum velocity allowed to consider the rocket to be stable
+  float landingDetectDuration = 3.00; // In seconds, duration over which the velocity must stay below landingDetectTreshold to trigger landing detection
   float landingApogeeDelay = 5.00; // In seconds, minimum delay between apogee and landing detection
   float minDeployTime = 2.0; // In seconds, minimum time for parachute deploy
   
