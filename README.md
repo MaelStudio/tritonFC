@@ -17,6 +17,9 @@ I've always enjoyed launching water rockets, but I wanted to learn more about wh
 - Servo Motor
 - 7.4V 450 mAh Lipo Battery
 
+## Software
+Launch is detected when the acceleration hits a certain treshold. Then, Triton measures barometric altitude. When the altitude drops compared to the apogee, the parachute is deployed. It then calculates the rocket's speed to detect when the rocket has landed. Sensor data is constantly being written to the SD card at a rate of 50 Hz, in parallel with the video recording.
+
 ## SD Card
 
 ![SD](img/sd.png)
