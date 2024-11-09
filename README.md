@@ -64,7 +64,7 @@ Each file name must start with `/` and `%i` is be replaced by the flight number.
 ![Onboard video](img/onboard.gif)
 
 By default the video has a VGA resolution (640x480) at 20 fps. (This GIF is compressed and is only 10 fps to reduce the file size).
-The code for the video comes from the [ESP32-CAM_MJPEG2SD](https://github.com/s60sc/ESP32-CAM_MJPEG2SD) project. I have thouroughly analyzed it to only keep the necessary functions.
+The code for the video comes from the [ESP32-CAM_MJPEG2SD](https://github.com/s60sc/ESP32-CAM_MJPEG2SD) project. I only keep the necessary functions.
 
 The resolution and fps can be modified in the configuration file. These are the options:
 
