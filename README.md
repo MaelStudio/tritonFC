@@ -25,7 +25,7 @@ I've always enjoyed launching water rockets, but I wanted to learn more about wh
 Triton produces a flight directory on the SD card for each new flight.
 Inside each flight directory, it saves:
 - `flight_1.csv`: a CSV file containing flight stats
-- `flight_1_lgs.csv`: a CSV file containing flight data logged at ~50 Hz
+- `flight_1_logs.csv`: a CSV file containing flight data logged at ~50 Hz
 - `flight_1.avi`: an AVI video file of the onboard camera footage
 
 ## Configuration file
