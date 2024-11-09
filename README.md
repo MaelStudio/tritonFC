@@ -43,11 +43,11 @@ Here is a list of every parameter:
 | `vidRes`                | VGA           | res | Video resolution, see "Onboard video" section below for resolution options                                      |
 | `vidFPS`                | 20            | int    | Target video fps (actual fps may vary due to ESP32S3 memory limitations)                                        |
 | `lowVoltageAlarm`       | 7.40          | float  | Battery voltage threshold for alarm at startup                                                                  |
-| `voltageOffset`         | 0.05          | float  | Offset for voltage readout                                                                                      |
+| `voltageOffset`         | 0.00          | float  | Offset for voltage readout                                                                                      |
 | `launchDetectThreshold` | 1.50          | float  | Vertical acceleration (in G's) required to trigger launch detection                                             |
 | `apogeeDetectThreshold` | 1.00          | float  | Altitude difference (in meters) required to trigger apogee detection                                            |
-| `landingDetectThreshold`| 0.50          | float  | Maximum stable velocity (in m/s) allowed to consider the rocket as landed                                       |
-| `landingDetectDuration` | 5.00          | float  | Duration (in seconds) for velocity to stay below `landingDetectThreshold` to trigger landing detection          |
+| `landingDetectThreshold`| 1.00          | float  | Maximum stable velocity (in m/s) allowed to consider the rocket as landed                                       |
+| `landingDetectDuration` | 3.00          | float  | Duration (in seconds) for velocity to stay below `landingDetectThreshold` to trigger landing detection          |
 | `landingApogeeDelay`    | 5.00          | float  | Minimum delay (in seconds) between apogee detection and landing detection                                       |
 | `minDeployTime`         | 2.00          | float  | Minimum parachute deployment time (in seconds) to avoid premature deployment|
 | `logTemp`               | /current.csv  | path | Path to the current flight log temporary file                                                                    |
