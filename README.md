@@ -17,6 +17,31 @@ I've always enjoyed launching water rockets, but I wanted to learn more about wh
 - Servo Motor
 - 7.4V 450 mAh Lipo Battery
 
+## SD Card
+
+![SD](img/sd.png)
+![Flight dir](img/flight_dir.png)
+
+Triton produces a flight directory for each new flight.
+Inside each flight directory, it saves:
+- `flight_1.avi`: an AVI video file of the onboard camera footage
+- `flight_1.csv`: a CSV file containing flight stats
+- `flight_1_lgs.csv`: a CSV file containing flight data logged at ~50 Hz
+
+## Flight Data
+
+![Flight stats](img/flight_stats.png)
+
+![Graphs](img/graphs.png)
+
+![Logs](img/logs.png)
+
+## Onboard video
+
+![Onboard video](img/onboard.gif)
+
+The video produced has a VGA resolution (640x480) at 20 FPS. (This GIF is compressed and is only 10 FPS to reduce the file size)
+
 ## Schematic
 
 ![Schematic](img/schematic.png)
@@ -33,4 +58,4 @@ I added a status LED (WS2812B), which only takes 1 digital pin, as well as a pas
 
 ## 3D Printed Brackets
 
-![PCB](img/brackets.png)
+![Brackets](img/brackets.png)
