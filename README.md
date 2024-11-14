@@ -1,6 +1,6 @@
 # Triton: Water Rocket Flight Computer
 
-I've always enjoyed launching water rockets, but I wanted to learn more about what happens during flight. That's why I built Triton, a simple flight computer based on the Xiao ESP32-S3. Featuring a BMP280 barometer and a MPU6050 IMU, Triton combines data logging to an SD card at 50 Hz, onboard video recording and even automatic parachute deployment, all in one package! This was also my first time designing a PCB so it was definitely a fun project!
+I've always enjoyed launching water rockets, but I wanted to learn more about what happens during flight. That's why I built Triton, a simple flight computer based on the [XIAO ESP32S3 Sense](https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html). Featuring a BMP280 barometer and a MPU6050 IMU, Triton combines data logging to an SD card at 50 Hz, onboard video recording and even automatic parachute deployment, all in one package! This was also my first time designing a PCB so it was definitely a fun project!
 
 <a href="https://youtu.be/Fx56_Bi1SGc" target="_blank">
   <img src="img/thumbnail.png" height=320 />
@@ -8,7 +8,7 @@ I've always enjoyed launching water rockets, but I wanted to learn more about wh
 
 ## Components List
 
-- Seeed Studio Xiao ESP32-S3 Sense
+- Seeed Studio XIAO ESP32S3 Sense
 - BMP280 Barometer
 - MPU6050 IMU (I know, not a great pick for a rocket but at least it's dirt cheap)
 - OV2640 Camera
