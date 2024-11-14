@@ -60,7 +60,7 @@ Here is a list of every parameter:
 | `logFile`               | /flight_%i_logs.csv | path | Flight logs file name                                                                                     |
 | `aviFile`               | /flight_%i.avi| path | Flight video file name                                                                                   |
 
-Each file name must start with `/` and `%i` is be replaced by the flight number.
+Each file name must start with `/`, and `%i` is replaced by the flight number.
 
 ## Onboard video
 
