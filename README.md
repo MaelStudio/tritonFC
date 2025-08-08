@@ -113,3 +113,5 @@ I added a status LED (WS2812B), which only takes 1 digital pin, as well as a pas
 ## 3D Printed Brackets
 
 ![Brackets](img/brackets.png)
+
+Click [here](img/brackets.stl) for the STL.
