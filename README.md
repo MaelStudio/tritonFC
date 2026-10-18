@@ -108,6 +108,8 @@ I added a status LED (WS2812B), which only takes 1 digital pin, as well as a pas
 
 ## PCB Design
 
+The Gerber file is available [here](img/Gerber_Triton-V1_2024-07-16.zip).
+
 ![PCB](img/pcb.png)
 
 ## 3D Printed Brackets
